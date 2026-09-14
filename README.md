@@ -22,9 +22,9 @@ The project follows a complete Machine Learning workflow:
 
 Three Machine Learning approaches are explored:
 
-- 📈 **Regression**
-- 🏷️ **Classification**
-- 🔵 **Clustering**
+- 📈 **Regression:** How much / what numerical value?
+- 🏷️ **Classification:** Which credit-risk category? 
+- 🔵 **Clustering:** Which companies have similar financial characteristics?
 
 The objective is not only to build predictive models, but also to understand how financial characteristics relate to corporate creditworthiness.
 
@@ -32,9 +32,7 @@ The objective is not only to build predictive models, but also to understand how
 
 # 🎯 Problem Statement
 
-Traditional corporate credit assessment requires analysing several financial indicators simultaneously, including liquidity, debt, profitability, asset efficiency, and cash flow.
-
-Analysing these indicators manually can make it difficult to identify relationships and patterns across a large number of corporations.
+Businesses generate large amounts of financial data across profitability, liquidity, leverage, cash flow, and operational performance. However, evaluating a company’s overall financial health and creditworthiness from these diverse indicators is complex and often relies on manual analysis. This project aims to develop a Machine Learning-based Business Financial Health & Credit Intelligence Platform that analyzes corporate financial indicators and business attributes to assess financial performance, classify credit risk, and identify distinct financial health profiles among companies.
 
 ### The problem addressed in this project is:
 
