@@ -1,4 +1,4 @@
-# 💳 Business-Financial-Health-Credit-Risk-Intelligence-Platform
+# 💳 Business Financial Health Credit Risk Intelligence Platform
 
 ### 📊 An End-to-End Machine Learning Approach for Corporate Financial Analysis
 
