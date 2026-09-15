@@ -351,18 +351,23 @@ All models within a track are evaluated using a consistent dataset split and app
 
 | Rank | Model | R² | RMSE | MAE |
 |---:|---|---:|---:|---:|
-| 🥇 1 | — | — | — | — |
-| 🥈 2 | — | — | — | — |
-| 🥉 3 | — | — | — | — |
-| 4 | — | — | — | — |
-| 5 | — | — | — | — |
-| 6 | — | — | — | — |
-| 7 | — | — | — | — |
-| 8 | — | — | — | — |
-| 9 | — | — | — | — |
-| 10 | — | — | — | — |
+| 1 | Random Forest Regressor | 0.6990 | 2.0602 | 1.5122 |
+| 2 | KNN Regressor | 0.6298 | 2.2847 | 1.5840 |
+| 3 | Support Vector Regressor | 0.5352 | 2.5601 | 1.9232 |
+| 4 | Gradient Boosting Regressor | 0.5226 | 2.5946 | 2.0032 |
+| 5 | Polynomial Regression | 0.4544 | 2.7737 | 2.1351 |
+| 6 | Decision Tree Regressor | 0.4122 | 2.8791 | 2.2264 |
+| 7 | Ridge Regression | 0.3474 | 3.0336 | 2.3208 |
+| 8 | Linear Regression | 0.3474 | 3.0337 | 2.3208 |
+| 9 | ElasticNet Regression | 0.3428 | 3.0443 | 2.3493 |
+| 10 | Lasso Regression | 0.3310 | 3.0715 | 2.3746 |
 
-> 📌 Final values will be updated after the complete regression evaluation.
+### Regression Tuning Summary
+
+| Model | Best Parameters | Baseline R² | Tuned R² | Mean CV R² |
+|---|---|---:|---:|---:|
+| Random Forest Regressor | `max_depth=None`, `n_estimators=100` | 0.6990 | 0.7682 | 0.7623 |
+| KNN Regressor | `n_neighbors=3` | 0.6298 | 0.6501 | 0.6713 |
 
 ---
 
@@ -370,18 +375,13 @@ All models within a track are evaluated using a consistent dataset split and app
 
 | Rank | Model | Accuracy | Precision | Recall | F1 | ROC-AUC |
 |---:|---|---:|---:|---:|---:|---:|
-| 🥇 1 | — | — | — | — | — | — |
-| 🥈 2 | — | — | — | — | — | — |
-| 🥉 3 | — | — | — | — | — | — |
-| 4 | — | — | — | — | — | — |
-| 5 | — | — | — | — | — | — |
-| 6 | — | — | — | — | — | — |
-| 7 | — | — | — | — | — | — |
-| 8 | — | — | — | — | — | — |
-| 9 | — | — | — | — | — | — |
-| 10 | — | — | — | — | — | — |
+| 1 | Decision Tree Classifier | 0.8924 | 0.8928 | 0.8924 | 0.8926 | 0.8956 |
+| 2 | Support Vector Classifier | 0.8687 | 0.8683 | 0.8687 | 0.8660 | 0.9170 |
+| 3 | KNN Classifier | 0.8661 | 0.8650 | 0.8661 | 0.8640 | 0.9224 |
+| 4 | Logistic Regression | 0.8008 | 0.7972 | 0.8008 | 0.7952 | 0.8355 |
+| 5 | Gaussian Naive Bayes | 0.7514 | 0.7542 | 0.7514 | 0.7527 | 0.8063 |
 
-> 📌 Final consolidated classification results will be added after completing all 10 algorithms.
+> Current classification metrics reflect the completed Part A models in `notebooks/classification.ipynb`. Part B models can be added once their notebook results are available.
 
 ---
 
