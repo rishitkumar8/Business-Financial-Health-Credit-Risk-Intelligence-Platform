@@ -373,15 +373,25 @@ All models within a track are evaluated using a consistent dataset split and app
 
 ## 🏷️ Classification Results
 
-| Rank | Model | Accuracy | Precision | Recall | F1 | ROC-AUC |
-|---:|---|---:|---:|---:|---:|---:|
-| 1 | Decision Tree Classifier | 0.8924 | 0.8928 | 0.8924 | 0.8926 | 0.8956 |
-| 2 | Support Vector Classifier | 0.8687 | 0.8683 | 0.8687 | 0.8660 | 0.9170 |
-| 3 | KNN Classifier | 0.8661 | 0.8650 | 0.8661 | 0.8640 | 0.9224 |
-| 4 | Logistic Regression | 0.8008 | 0.7972 | 0.8008 | 0.7952 | 0.8355 |
-| 5 | Gaussian Naive Bayes | 0.7514 | 0.7542 | 0.7514 | 0.7527 | 0.8063 |
+| **Rank** | **Model**                    | **Accuracy** | **Precision** | **Recall** | **F1**   | **ROC-AUC** |
+| -------- | ---------------------------- | ------------ | ------------- | ---------- | -------- | ----------- |
+| 1        | Random Forest Classifier     | 0.9142       | 0.9137        | 0.9142     | 0.9135   | 0.9671      |
+| 2        | Bagging Classifier            | 0.9135       | 0.9131        | 0.9135     | 0.9129   | 0.9650      |
+| 3        | MLP Classifier                | 0.8860       | 0.8851        | 0.8860     | 0.8851   | 0.9274      |
+| 4        | KNN Classifier                | 0.8661       | 0.8650        | 0.8661     | 0.8640   | 0.9224      |
+| 5        | Gradient Boosting Classifier  | 0.8443       | 0.8426        | 0.8443     | 0.8414   | 0.9143      |
+| 6        | Support Vector Classifier     | 0.8398       | 0.8403        | 0.8398     | 0.8344   | 0.8851      |
+| 7        | Decision Tree Classifier      | 0.8206       | 0.8185        | 0.8206     | 0.8191   | 0.8438      |
+| 8        | Logistic Regression           | 0.8008       | 0.7972        | 0.8008     | 0.7952   | 0.8355      |
+| 9        | AdaBoost Classifier            | 0.7867       | 0.7830        | 0.7867     | 0.7839   | 0.8410      |
+| 10       | Gaussian Naive Bayes           | 0.7514       | 0.7542        | 0.7514     | 0.7527   | 0.8063      |
 
-> Current classification metrics reflect the completed Part A models in `notebooks/classification.ipynb`. Part B models can be added once their notebook results are available.
+### Classification Tuning Summary
+
+| **Model**                | **Best Parameters** | **Baseline F1** | **Tuned F1** | **Mean CV F1** |
+| ------------------------ | ------------------- | --------------- | ------------ | -------------- |
+| Random Forest Classifier | `max_depth=None`, `min_samples_leaf=1`, `min_samples_split=5`, `n_estimators=200` | 0.9135 | 0.9105 | 0.9168 |
+| Bagging Classifier       | `max_features=0.7`, `max_samples=1.0`, `n_estimators=200` | 0.9129 | 0.9188 | 0.9173 |
 
 ---
 
