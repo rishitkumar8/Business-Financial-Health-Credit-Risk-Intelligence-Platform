@@ -399,8 +399,9 @@ All models within a track are evaluated using a consistent dataset split and app
 
 | Algorithm | Silhouette ↑ | Davies-Bouldin ↓ | Calinski-Harabasz ↑ |
 |---|---:|---:|---:|
-| K-Means | — | — | — |
-| Agglomerative Clustering | — | — | — |
+| K-Means |0.177552	|1.744044|	1998.38482|
+| Agglomerative Clustering |0.168442	|1.845803	|1866.80092|
+
 
 ---
 
