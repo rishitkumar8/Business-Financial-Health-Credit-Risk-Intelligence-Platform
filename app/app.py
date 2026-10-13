@@ -439,7 +439,27 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    selected_page = st.radio("Navigation", PAGES, label_visibility="collapsed")
+    if "selected_page" not in st.session_state:
+        st.session_state["selected_page"] = "Overview"
+
+    # Consume any pending page navigation request set before radio instantiation
+    if "pending_page" in st.session_state and st.session_state["pending_page"] in PAGES:
+        st.session_state["selected_page"] = st.session_state.pop("pending_page")
+
+    def _sync_nav():
+        st.session_state["selected_page"] = st.session_state["nav_radio"]
+
+    curr_index = PAGES.index(st.session_state["selected_page"]) if st.session_state["selected_page"] in PAGES else 0
+
+    selected_page = st.radio(
+        "Navigation",
+        PAGES,
+        index=curr_index,
+        key="nav_radio",
+        on_change=_sync_nav,
+        label_visibility="collapsed"
+    )
+    st.session_state["selected_page"] = selected_page
 
     st.markdown(f"""
         <div style="margin-top:22px;padding-top:14px;border-top:1px solid {C_BORDER};">
@@ -482,29 +502,807 @@ def page_header(title: str, desc: str):
     """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 12. PAGE 1: OVERVIEW
+# 12. PAGE 1: OVERVIEW — PROJECT INTRODUCTION & INTELLIGENCE DASHBOARD
 # ──────────────────────────────────────────────────────────────────────────────
 if selected_page == "Overview":
-    page_header("Overview",
-                "Executive intelligence oversight of corporate credit solvency, agency distributions, and key financial ratios.")
+    # ── Helper Navigation Callback ──
+    def _go_to_page(page_name):
+        st.session_state["pending_page"] = page_name
 
-    # KPI Metrics Row
-    total_records = len(raw_df)
-    unique_corps  = raw_df["Corporation"].nunique()
-    total_sectors = raw_df["Sector"].nunique()
-    miss_cells    = raw_df.isnull().sum().sum()
-    completeness  = (1 - miss_cells / (raw_df.shape[0] * raw_df.shape[1])) * 100
-    ig_pct        = raw_df["Binary Rating"].mean() * 100
+    # ── 1. PROJECT HERO & INTRODUCTION ──
+    st.markdown(f"""
+        <div class="cl-hero-section">
+            <div class="cl-hero-badge">Academic ML Capstone Platform</div>
+            <div class="cl-hero-title">CreditLens</div>
+            <div class="cl-hero-subtitle">Business Financial Health & Credit Risk Intelligence Platform</div>
+            <p class="cl-hero-desc">
+                CreditLens is a machine learning platform that analyzes corporate financial ratios and credit-related information to evaluate financial performance, classify credit-related outcomes, and discover financial-health patterns among companies.
+                Corporate financial indicators provide complementary perspectives on corporate profitability, liquidity, financial leverage, cash flow solvency, and operational efficiency, allowing multi-perspective empirical analysis of corporate credit health.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Total Observations",  f"{total_records:,}",   "Rating events")
-    k2.metric("Unique Corporations", f"{unique_corps:,}",    "Rated entities")
-    k3.metric("Industry Sectors",    f"{total_sectors}",     "Sectors")
-    k4.metric("Data Completeness",   f"{completeness:.1f}%", "Verified cells")
+    # ── 2. PROBLEM STATEMENT & OBJECTIVES ──
+    with st.container(border=True):
+        st.markdown(f"""
+            <div class="cl-card-header">
+                <div class="cl-card-title">Problem Statement & Capstone Objectives</div>
+                <div class="cl-card-sub">Synthesizing multidimensional corporate financial indicators into coherent machine learning intelligence</div>
+            </div>
+        """, unsafe_allow_html=True)
 
-    st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+        ps_col1, ps_col2 = st.columns([6, 6], gap="large")
 
-    # Main Visual Analytics Row
+        with ps_col1:
+            st.markdown(f"""
+                <div style="font-size:13.5px;color:{C_TEXT_BODY};line-height:1.6;">
+                    <p style="margin-bottom:10px;">
+                        Interpreting numerous corporate financial ratios and credit indicators can make it difficult to obtain a consolidated, objective understanding of overall financial performance and underlying risk patterns. Traditional manual credit scoring and univariate analysis struggle to capture complex non-linear interactions across margin health, capital structure, and solvency buffers.
+                    </p>
+                    <p style="margin-bottom:0;">
+                        The project explores how machine learning can address this challenge through three structured analytical approaches:
+                    </p>
+                    <ul style="margin-top:6px;margin-bottom:0;padding-left:20px;color:{C_ESPRESSO};">
+                        <li><b>Predicting a continuous financial-performance indicator:</b> Estimating corporate credit rating scores across a 23-level scale.</li>
+                        <li><b>Classifying categorical credit solvency outcomes:</b> Predicting investment grade versus speculative grade classifications.</li>
+                        <li><b>Discovering unsupervised company clusters:</b> Grouping firms with homogeneous financial-health profiles without prior label exposure.</li>
+                    </ul>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with ps_col2:
+            st.markdown(f"""
+                <div class="cl-card-secondary" style="margin-bottom:0;padding:16px 18px;">
+                    <div style="font-size:12px;font-weight:700;color:{C_ESPRESSO};text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">
+                        🎯 Capstone Research Objectives
+                    </div>
+                    <div style="font-size:12px;color:{C_TEXT_BODY};line-height:1.5;">
+                        <div style="margin-bottom:6px;"><b>1. Empirical Data Exploration:</b> Analyze multi-sector distributions, missingness patterns, and financial ratio spreads across 7,805 corporate filings.</div>
+                        <div style="margin-bottom:6px;"><b>2. Methodological Preprocessing:</b> Implement robust median imputation, IQR outlier clipping, one-hot sector encoding, and standard scaling without data leakage.</div>
+                        <div style="margin-bottom:6px;"><b>3. Multi-Track ML Benchmark:</b> Train and compare 10 regression, 10 classification, and 2 clustering algorithms using identical splits and rigorous validation.</div>
+                        <div><b>4. Interpretability & Risk Synthesis:</b> Identify dominant financial solvency drivers and quantify credit health patterns across commercial sectors.</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
+    # ── 3. THREE MACHINE LEARNING TRACKS ──
+    st.markdown(f"""
+        <div class="cl-section-header">
+            <div class="cl-section-title">🤖 Machine Learning Tracks</div>
+            <div class="cl-section-sub">Three specialized analytical methodologies addressing distinct financial intelligence dimensions</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    tc1, tc2, tc3 = st.columns(3, gap="medium")
+
+    with tc1:
+        st.markdown(f"""
+            <div class="cl-track-card">
+                <div>
+                    <div class="cl-track-header">
+                        <div class="cl-track-icon">📈</div>
+                        <div>
+                            <div class="cl-track-name">Regression Track</div>
+                            <div class="cl-track-category">Continuous Performance</div>
+                        </div>
+                    </div>
+                    <div class="cl-track-body">
+                        Predicts a continuous corporate financial performance indicator (<b>Rating_Score</b>, range 0–22, mapped from 23 rating grades from D to AAA). Evaluates numerical credit strength from liquidity, leverage, and profitability ratios.
+                    </div>
+                </div>
+                <div>
+                    <div class="cl-track-meta">
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Actual Target:</span>
+                            <span class="cl-track-meta-val">Rating_Score (0 to 22)</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Best Model:</span>
+                            <span class="cl-track-meta-val">Random Forest (Tuned)</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Verified R²:</span>
+                            <span class="cl-track-meta-val">0.7682</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Test RMSE / MAE:</span>
+                            <span class="cl-track-meta-val">1.8081 / 1.2507</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Evaluation Split:</span>
+                            <span class="cl-track-meta-val">Holdout Test (n=1,561)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("Explore Regression Lab →", key="btn_nav_reg", use_container_width=True):
+            _go_to_page("Regression Lab")
+            st.rerun()
+
+    with tc2:
+        st.markdown(f"""
+            <div class="cl-track-card">
+                <div>
+                    <div class="cl-track-header">
+                        <div class="cl-track-icon">🏷️</div>
+                        <div>
+                            <div class="cl-track-name">Classification Track</div>
+                            <div class="cl-track-category">Credit Solvency Class</div>
+                        </div>
+                    </div>
+                    <div class="cl-track-body">
+                        Predicts categorical credit solvency status (<b>Binary Rating</b>: 1 for Investment Grade [AAA to BBB-], 0 for Speculative Grade [BB+ to D]). Provides calibrated probability outputs for balance sheet risk assessment.
+                    </div>
+                </div>
+                <div>
+                    <div class="cl-track-meta">
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Actual Target:</span>
+                            <span class="cl-track-meta-val">Binary Rating (Class 0 / 1)</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Best Model:</span>
+                            <span class="cl-track-meta-val">Bagging Classifier (Tuned)</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Verified Accuracy:</span>
+                            <span class="cl-track-meta-val">91.93% (0.9193)</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Weighted F1 / ROC-AUC:</span>
+                            <span class="cl-track-meta-val">0.9188 / 0.9659</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Evaluation Split:</span>
+                            <span class="cl-track-meta-val">Holdout Test (n=1,561)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("Explore Classification Lab →", key="btn_nav_clf", use_container_width=True):
+            _go_to_page("Classification Lab")
+            st.rerun()
+
+    with tc3:
+        st.markdown(f"""
+            <div class="cl-track-card">
+                <div>
+                    <div class="cl-track-header">
+                        <div class="cl-track-icon">🔵</div>
+                        <div>
+                            <div class="cl-track-name">Clustering Track</div>
+                            <div class="cl-track-category">Unsupervised Profiling</div>
+                        </div>
+                    </div>
+                    <div class="cl-track-body">
+                        Discovers natural clusters of corporations sharing homogeneous financial profile characteristics without utilizing rating labels during model fitting. Validates discovered segments against post-clustering solvency distributions.
+                    </div>
+                </div>
+                <div>
+                    <div class="cl-track-meta">
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Implemented Algos:</span>
+                            <span class="cl-track-meta-val">K-Means & Hierarchical</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Best Result:</span>
+                            <span class="cl-track-meta-val">K-Means (k=3 clusters)</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Silhouette Score:</span>
+                            <span class="cl-track-meta-val">0.1776</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">DB Index / CH Score:</span>
+                            <span class="cl-track-meta-val">1.7440 / 1,998.4</span>
+                        </div>
+                        <div class="cl-track-meta-row">
+                            <span class="cl-track-meta-label">Dataset Scope:</span>
+                            <span class="cl-track-meta-val">Preprocessed Corpus (N=7,805)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("Explore Clustering Studio →", key="btn_nav_clu", use_container_width=True):
+            _go_to_page("Clustering Studio")
+            st.rerun()
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+    # ── 4. GENUINE MODEL-PERFORMANCE HIGHLIGHTS ──
+    with st.container(border=True):
+        st.markdown(f"""
+            <div class="cl-card-header">
+                <div class="cl-card-title">🏆 Genuine Model Performance Summary</div>
+                <div class="cl-card-sub">Verified benchmark metrics computed on held-out test splits (n=1,561) and full preprocessed corpus from project artifacts</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        p_reg, p_clf, p_clu = st.columns(3, gap="medium")
+
+        with p_reg:
+            st.markdown(f"""
+                <div class="cl-card-secondary" style="margin-bottom:0;padding:16px 18px;border-left:4px solid {C_MOCHA};">
+                    <div style="font-size:11px;font-weight:700;color:{C_TEXT_MUTED};text-transform:uppercase;letter-spacing:0.04em;">
+                        Best Regression Model
+                    </div>
+                    <div style="font-size:18px;font-weight:800;color:{C_ESPRESSO};margin:4px 0 8px 0;">
+                        Random Forest (Tuned)
+                    </div>
+                    <div style="font-size:12px;color:{C_TEXT_BODY};line-height:1.5;margin-bottom:10px;">
+                        Optimized ensemble regressor evaluating continuous <b>Rating_Score</b>.
+                    </div>
+                    <div style="background:{C_CARD};border:1px solid {C_BORDER};border-radius:8px;padding:8px 12px;font-size:12px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="color:{C_TEXT_MUTED};">R² Score (Holdout):</span>
+                            <span style="color:{C_ESPRESSO};font-weight:800;">0.7682</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="color:{C_TEXT_MUTED};">Root Mean Sq Err (RMSE):</span>
+                            <span style="color:{C_ESPRESSO};font-weight:700;">1.8081</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="color:{C_TEXT_MUTED};">Mean Absolute Err (MAE):</span>
+                            <span style="color:{C_ESPRESSO};font-weight:700;">1.2507</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:{C_TEXT_MUTED};">Validation Method:</span>
+                            <span style="color:{C_TEXT_MUTED};font-size:11px;">Holdout 20% (5-Fold CV: 0.7623)</span>
+                        </div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with p_clf:
+            st.markdown(f"""
+                <div class="cl-card-secondary" style="margin-bottom:0;padding:16px 18px;border-left:4px solid {C_DEEP_MOCHA};">
+                    <div style="font-size:11px;font-weight:700;color:{C_TEXT_MUTED};text-transform:uppercase;letter-spacing:0.04em;">
+                        Best Classification Model
+                    </div>
+                    <div style="font-size:18px;font-weight:800;color:{C_ESPRESSO};margin:4px 0 8px 0;">
+                        Bagging Classifier (Tuned)
+                    </div>
+                    <div style="font-size:12px;color:{C_TEXT_BODY};line-height:1.5;margin-bottom:10px;">
+                        Bootstrap aggregation classifier predicting <b>Binary Rating</b> (IG vs SG).
+                    </div>
+                    <div style="background:{C_CARD};border:1px solid {C_BORDER};border-radius:8px;padding:8px 12px;font-size:12px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="color:{C_TEXT_MUTED};">Test Accuracy:</span>
+                            <span style="color:{C_ESPRESSO};font-weight:800;">91.93% (0.9193)</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="color:{C_TEXT_MUTED};">Weighted F1-Score:</span>
+                            <span style="color:{C_ESPRESSO};font-weight:700;">0.9188</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="color:{C_TEXT_MUTED};">ROC-AUC Score:</span>
+                            <span style="color:{C_ESPRESSO};font-weight:700;">0.9659</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:{C_TEXT_MUTED};">Validation Method:</span>
+                            <span style="color:{C_TEXT_MUTED};font-size:11px;">Holdout 20% (Baseline RF: 0.9671 AUC)</span>
+                        </div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with p_clu:
+            st.markdown(f"""
+                <div class="cl-card-secondary" style="margin-bottom:0;padding:16px 18px;border-left:4px solid {V_TEAL};">
+                    <div style="font-size:11px;font-weight:700;color:{C_TEXT_MUTED};text-transform:uppercase;letter-spacing:0.04em;">
+                        Best Clustering Structure
+                    </div>
+                    <div style="font-size:18px;font-weight:800;color:{C_ESPRESSO};margin:4px 0 8px 0;">
+                        K-Means Clustering (k=3)
+                    </div>
+                    <div style="font-size:12px;color:{C_TEXT_BODY};line-height:1.5;margin-bottom:10px;">
+                        Centroid partitioning segmenting financial profiles into 3 clusters.
+                    </div>
+                    <div style="background:{C_CARD};border:1px solid {C_BORDER};border-radius:8px;padding:8px 12px;font-size:12px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="color:{C_TEXT_MUTED};">Silhouette Score:</span>
+                            <span style="color:{C_ESPRESSO};font-weight:800;">0.1776</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="color:{C_TEXT_MUTED};">Davies–Bouldin Index:</span>
+                            <span style="color:{C_ESPRESSO};font-weight:700;">1.7440 (Lower is better)</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="color:{C_TEXT_MUTED};">Calinski–Harabasz:</span>
+                            <span style="color:{C_ESPRESSO};font-weight:700;">1,998.4 (Higher is better)</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:{C_TEXT_MUTED};">Evaluation Scope:</span>
+                            <span style="color:{C_TEXT_MUTED};font-size:11px;">Entire Scaled Corpus (N=7,805)</span>
+                        </div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+    # ── 5. DATASET & WORKFLOW SUMMARY ──
+    with st.container(border=True):
+        st.markdown(f"""
+            <div class="cl-card-header">
+                <div class="cl-card-title">📂 Dataset Profile & Machine Learning Workflow</div>
+                <div class="cl-card-sub">Dynamic empirical dataset telemetry and the end-to-end multi-track pipeline architecture</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Dynamic Dataset Telemetry
+        total_records = len(raw_df)
+        total_cols    = raw_df.shape[1]
+        unique_corps  = raw_df["Corporation"].nunique()
+        total_sectors = raw_df["Sector"].nunique()
+        total_agencies = raw_df["Rating Agency"].nunique()
+        total_ratings  = raw_df["Rating"].nunique()
+        miss_cells     = raw_df.isnull().sum().sum()
+        completeness   = (1 - miss_cells / (raw_df.shape[0] * raw_df.shape[1])) * 100
+        ig_count       = int(raw_df["Binary Rating"].sum())
+        ig_pct         = raw_df["Binary Rating"].mean() * 100
+        sg_count       = total_records - ig_count
+
+        ds1, ds2, ds3, ds4 = st.columns(4)
+        ds1.metric("Observations (N)", f"{total_records:,}", "Rated events")
+        ds2.metric("Raw Features", f"{total_cols} columns", "16 financial ratios")
+        ds3.metric("Rated Corporations", f"{unique_corps:,}", f"{total_sectors} sectors")
+        ds4.metric("Data Completeness", f"{completeness:.1f}%", f"{total_agencies} rating agencies")
+
+        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
+        # End-to-End Workflow Diagram
+        st.markdown(f"""
+            <div style="font-size:12px;font-weight:700;color:{C_TEXT_MUTED};text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">
+                End-to-End Methodological Architecture
+            </div>
+        """, unsafe_allow_html=True)
+
+        w1, w2, w3, w4, w5 = st.columns(5, gap="small")
+        with w1:
+            st.markdown(f"""
+                <div class="cl-workflow-step">
+                    <div class="cl-workflow-step-num">Step 1</div>
+                    <div class="cl-workflow-step-title">Raw Dataset</div>
+                    <div class="cl-workflow-step-desc">7,805 corporate financial records & agency rating classifications.</div>
+                </div>
+            """, unsafe_allow_html=True)
+        with w2:
+            st.markdown(f"""
+                <div class="cl-workflow-step">
+                    <div class="cl-workflow-step-num">Step 2</div>
+                    <div class="cl-workflow-step-title">Preprocessing</div>
+                    <div class="cl-workflow-step-desc">Median imputation, IQR clipping (±1.5×IQR) & duplicate validation.</div>
+                </div>
+            """, unsafe_allow_html=True)
+        with w3:
+            st.markdown(f"""
+                <div class="cl-workflow-step">
+                    <div class="cl-workflow-step-num">Step 3</div>
+                    <div class="cl-workflow-step-title">Feature Prep</div>
+                    <div class="cl-workflow-step-desc">Sector dummy encoding (11 dummies) & StandardScaler normalization.</div>
+                </div>
+            """, unsafe_allow_html=True)
+        with w4:
+            st.markdown(f"""
+                <div class="cl-workflow-step">
+                    <div class="cl-workflow-step-num">Step 4</div>
+                    <div class="cl-workflow-step-title">3 ML Tracks</div>
+                    <div class="cl-workflow-step-desc">Regression (10 algos), Classification (10 algos), Clustering (2 algos).</div>
+                </div>
+            """, unsafe_allow_html=True)
+        with w5:
+            st.markdown(f"""
+                <div class="cl-workflow-step">
+                    <div class="cl-workflow-step-num">Step 5</div>
+                    <div class="cl-workflow-step-title">Financial Insights</div>
+                    <div class="cl-workflow-step-desc">Solvency drivers, margin spreads & cluster profiles across sectors.</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown(f"""
+            <div style="font-size:11px;color:{C_TEXT_MUTED};margin-top:8px;font-style:italic;">
+                *Note on methodology: Regression models use an 80/20 train-test split (train=6,244, test=1,561) evaluating numeric Rating_Score. Classification models use an identical stratified 80/20 split on Binary Rating. Clustering is unsupervised across all 7,805 preprocessed observations without using ground-truth labels during model fitting.
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+    # ── 6. IMPLEMENTED ALGORITHMS SECTION ──
+    with st.expander("🔬 Algorithms Implemented — Verified Model Catalog (Expand to View All 22 Models)", expanded=False):
+        st.markdown(f"""
+            <div style="font-size:13px;color:{C_TEXT_BODY};margin-bottom:14px;line-height:1.5;">
+                Every algorithm listed below was empirically trained, saved as serialized artifacts (<code>models/*.pkl</code>), and evaluated within the project's Jupyter notebooks and evaluation pipeline.
+            </div>
+        """, unsafe_allow_html=True)
+
+        tab_alg_reg, tab_alg_clf, tab_alg_clu = st.tabs([
+            "📈 Regression Algorithms (10 + 2 Tuned)",
+            "🏷️ Classification Algorithms (10 + 2 Tuned)",
+            "🔵 Clustering Algorithms (2 Models)"
+        ])
+
+        with tab_alg_reg:
+            st.markdown(f"""
+                <table style="width:100%;border-collapse:collapse;font-size:12px;color:{C_ESPRESSO};">
+                    <thead>
+                        <tr style="background:{C_PANEL_SEC};border-bottom:1.5px solid {C_BORDER};text-align:left;">
+                            <th style="padding:8px 10px;">#</th>
+                            <th style="padding:8px 10px;">Algorithm</th>
+                            <th style="padding:8px 10px;">Purpose & Methodology</th>
+                            <th style="padding:8px 10px;">Tuned?</th>
+                            <th style="padding:8px 10px;">R² Score</th>
+                            <th style="padding:8px 10px;">Test RMSE</th>
+                            <th style="padding:8px 10px;">Test MAE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid {C_BORDER};background:#FAF6EF;font-weight:700;">
+                            <td style="padding:7px 10px;">1</td>
+                            <td style="padding:7px 10px;">Random Forest (Tuned)</td>
+                            <td style="padding:7px 10px;">Grid-searched ensemble of decision trees with optimized depth and estimators</td>
+                            <td style="padding:7px 10px;">✓ Yes (n_est=100, depth=None)</td>
+                            <td style="padding:7px 10px;color:#2E7D32;">0.7682</td>
+                            <td style="padding:7px 10px;">1.8081</td>
+                            <td style="padding:7px 10px;">1.2507</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">2</td>
+                            <td style="padding:7px 10px;">Random Forest Regressor</td>
+                            <td style="padding:7px 10px;">Baseline ensemble of decision trees reducing variance via bootstrap aggregation</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.6990</td>
+                            <td style="padding:7px 10px;">2.0602</td>
+                            <td style="padding:7px 10px;">1.5122</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">3</td>
+                            <td style="padding:7px 10px;">KNN Regressor (Tuned)</td>
+                            <td style="padding:7px 10px;">Instance-based regressor tuned with optimal neighbor count</td>
+                            <td style="padding:7px 10px;">✓ Yes (n_neighbors=3)</td>
+                            <td style="padding:7px 10px;">0.6500</td>
+                            <td style="padding:7px 10px;">2.2217</td>
+                            <td style="padding:7px 10px;">1.4743</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">4</td>
+                            <td style="padding:7px 10px;">KNN Regressor</td>
+                            <td style="padding:7px 10px;">Baseline k-nearest neighbors regression averaging nearby financial records</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.6298</td>
+                            <td style="padding:7px 10px;">2.2848</td>
+                            <td style="padding:7px 10px;">1.5869</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">5</td>
+                            <td style="padding:7px 10px;">Support Vector Regressor (SVR)</td>
+                            <td style="padding:7px 10px;">Epsilon-SVR with RBF kernel maximizing margin within tolerance threshold</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.5352</td>
+                            <td style="padding:7px 10px;">2.5601</td>
+                            <td style="padding:7px 10px;">1.9232</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">6</td>
+                            <td style="padding:7px 10px;">Gradient Boosting Regressor</td>
+                            <td style="padding:7px 10px;">Sequential gradient boosting minimizing residual loss iteratively</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.5226</td>
+                            <td style="padding:7px 10px;">2.5946</td>
+                            <td style="padding:7px 10px;">2.0032</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">7</td>
+                            <td style="padding:7px 10px;">Polynomial Regression</td>
+                            <td style="padding:7px 10px;">Degree-2 polynomial feature mapping with linear regression fitting</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.4544</td>
+                            <td style="padding:7px 10px;">2.7737</td>
+                            <td style="padding:7px 10px;">2.1351</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">8</td>
+                            <td style="padding:7px 10px;">Decision Tree Regressor</td>
+                            <td style="padding:7px 10px;">Single unpruned decision tree partitioning feature space recursively</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.4122</td>
+                            <td style="padding:7px 10px;">2.8791</td>
+                            <td style="padding:7px 10px;">2.2264</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">9</td>
+                            <td style="padding:7px 10px;">Ridge Regression</td>
+                            <td style="padding:7px 10px;">Linear regression with L2 regularization mitigating collinear financial ratios</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.3474</td>
+                            <td style="padding:7px 10px;">3.0336</td>
+                            <td style="padding:7px 10px;">2.3208</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">10</td>
+                            <td style="padding:7px 10px;">Linear Regression (OLS)</td>
+                            <td style="padding:7px 10px;">Ordinary least squares establishing linear baseline relationship</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.3474</td>
+                            <td style="padding:7px 10px;">3.0337</td>
+                            <td style="padding:7px 10px;">2.3208</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">11</td>
+                            <td style="padding:7px 10px;">ElasticNet Regression</td>
+                            <td style="padding:7px 10px;">Combined L1 and L2 regularized linear model</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.3428</td>
+                            <td style="padding:7px 10px;">3.0443</td>
+                            <td style="padding:7px 10px;">2.3493</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:7px 10px;">12</td>
+                            <td style="padding:7px 10px;">Lasso Regression</td>
+                            <td style="padding:7px 10px;">L1 penalized linear model performing ratio shrinkage and feature selection</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.3310</td>
+                            <td style="padding:7px 10px;">3.0715</td>
+                            <td style="padding:7px 10px;">2.3746</td>
+                        </tr>
+                    </tbody>
+                </table>
+            """, unsafe_allow_html=True)
+
+        with tab_alg_clf:
+            st.markdown(f"""
+                <table style="width:100%;border-collapse:collapse;font-size:12px;color:{C_ESPRESSO};">
+                    <thead>
+                        <tr style="background:{C_PANEL_SEC};border-bottom:1.5px solid {C_BORDER};text-align:left;">
+                            <th style="padding:8px 10px;">#</th>
+                            <th style="padding:8px 10px;">Algorithm</th>
+                            <th style="padding:8px 10px;">Purpose & Architecture</th>
+                            <th style="padding:8px 10px;">Tuned?</th>
+                            <th style="padding:8px 10px;">Accuracy</th>
+                            <th style="padding:8px 10px;">Weighted F1</th>
+                            <th style="padding:8px 10px;">ROC-AUC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid {C_BORDER};background:#FAF6EF;font-weight:700;">
+                            <td style="padding:7px 10px;">1</td>
+                            <td style="padding:7px 10px;">Bagging Classifier (Tuned)</td>
+                            <td style="padding:7px 10px;">Tuned bootstrap aggregation across 200 base estimators with 70% feature sampling</td>
+                            <td style="padding:7px 10px;">✓ Yes (n_est=200, feat=0.7)</td>
+                            <td style="padding:7px 10px;color:#2E7D32;">0.9193</td>
+                            <td style="padding:7px 10px;color:#2E7D32;">0.9188</td>
+                            <td style="padding:7px 10px;">0.9659</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">2</td>
+                            <td style="padding:7px 10px;">Random Forest Classifier</td>
+                            <td style="padding:7px 10px;">Baseline ensemble of decision trees with random feature subspacing</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.9142</td>
+                            <td style="padding:7px 10px;">0.9135</td>
+                            <td style="padding:7px 10px;color:#2E7D32;">0.9671</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">3</td>
+                            <td style="padding:7px 10px;">Bagging Classifier</td>
+                            <td style="padding:7px 10px;">Standard bootstrap aggregation of decision trees</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.9135</td>
+                            <td style="padding:7px 10px;">0.9129</td>
+                            <td style="padding:7px 10px;">0.9650</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">4</td>
+                            <td style="padding:7px 10px;">Random Forest (Tuned)</td>
+                            <td style="padding:7px 10px;">Grid-searched random forest with min-split constraints</td>
+                            <td style="padding:7px 10px;">✓ Yes (n_est=200, min_split=5)</td>
+                            <td style="padding:7px 10px;">0.9110</td>
+                            <td style="padding:7px 10px;">0.9105</td>
+                            <td style="padding:7px 10px;">0.9667</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">5</td>
+                            <td style="padding:7px 10px;">MLP Classifier</td>
+                            <td style="padding:7px 10px;">Multi-layer perceptron neural network with backpropagation</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.8860</td>
+                            <td style="padding:7px 10px;">0.8851</td>
+                            <td style="padding:7px 10px;">0.9274</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">6</td>
+                            <td style="padding:7px 10px;">KNN Classifier</td>
+                            <td style="padding:7px 10px;">Instance-based k-nearest neighbors classification in standardized ratio space</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.8661</td>
+                            <td style="padding:7px 10px;">0.8640</td>
+                            <td style="padding:7px 10px;">0.9224</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">7</td>
+                            <td style="padding:7px 10px;">Gradient Boosting Classifier</td>
+                            <td style="padding:7px 10px;">Sequential gradient boosting on deviance loss function</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.8443</td>
+                            <td style="padding:7px 10px;">0.8414</td>
+                            <td style="padding:7px 10px;">0.9143</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">8</td>
+                            <td style="padding:7px 10px;">Support Vector Classifier (SVC)</td>
+                            <td style="padding:7px 10px;">Soft-margin hyperplane separator with RBF kernel</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.8398</td>
+                            <td style="padding:7px 10px;">0.8344</td>
+                            <td style="padding:7px 10px;">0.8851</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">9</td>
+                            <td style="padding:7px 10px;">Decision Tree Classifier</td>
+                            <td style="padding:7px 10px;">Hierarchical decision tree with Gini impurity splitting</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.8206</td>
+                            <td style="padding:7px 10px;">0.8191</td>
+                            <td style="padding:7px 10px;">0.8438</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">10</td>
+                            <td style="padding:7px 10px;">Logistic Regression</td>
+                            <td style="padding:7px 10px;">Log-odds linear classifier establishing solvency odds benchmark</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.8008</td>
+                            <td style="padding:7px 10px;">0.7952</td>
+                            <td style="padding:7px 10px;">0.8355</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid {C_BORDER};">
+                            <td style="padding:7px 10px;">11</td>
+                            <td style="padding:7px 10px;">AdaBoost Classifier</td>
+                            <td style="padding:7px 10px;">Adaptive boosting reweighting misclassified instances sequentially</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.7867</td>
+                            <td style="padding:7px 10px;">0.7839</td>
+                            <td style="padding:7px 10px;">0.8410</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:7px 10px;">12</td>
+                            <td style="padding:7px 10px;">Gaussian Naive Bayes</td>
+                            <td style="padding:7px 10px;">Probabilistic classifier assuming conditionally independent features</td>
+                            <td style="padding:7px 10px;">Baseline</td>
+                            <td style="padding:7px 10px;">0.7514</td>
+                            <td style="padding:7px 10px;">0.7527</td>
+                            <td style="padding:7px 10px;">0.8063</td>
+                        </tr>
+                    </tbody>
+                </table>
+            """, unsafe_allow_html=True)
+
+        with tab_alg_clu:
+            st.markdown(f"""
+                <table style="width:100%;border-collapse:collapse;font-size:12px;color:{C_ESPRESSO};">
+                    <thead>
+                        <tr style="background:{C_PANEL_SEC};border-bottom:1.5px solid {C_BORDER};text-align:left;">
+                            <th style="padding:8px 10px;">#</th>
+                            <th style="padding:8px 10px;">Algorithm</th>
+                            <th style="padding:8px 10px;">Clustering Methodology</th>
+                            <th style="padding:8px 10px;">Clusters (k)</th>
+                            <th style="padding:8px 10px;">Silhouette Score ↑</th>
+                            <th style="padding:8px 10px;">Davies–Bouldin Index ↓</th>
+                            <th style="padding:8px 10px;">Calinski–Harabasz Index ↑</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid {C_BORDER};background:#FAF6EF;font-weight:700;">
+                            <td style="padding:7px 10px;">1</td>
+                            <td style="padding:7px 10px;">K-Means Clustering</td>
+                            <td style="padding:7px 10px;">Centroid-based partitioning with k-means++ initialization, optimized via Elbow method</td>
+                            <td style="padding:7px 10px;">k = 3</td>
+                            <td style="padding:7px 10px;color:#2E7D32;">0.1776</td>
+                            <td style="padding:7px 10px;color:#2E7D32;">1.7440</td>
+                            <td style="padding:7px 10px;color:#2E7D32;">1,998.4</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:7px 10px;">2</td>
+                            <td style="padding:7px 10px;">Agglomerative Hierarchical</td>
+                            <td style="padding:7px 10px;">Bottom-up agglomerative clustering with Ward linkage minimizing variance</td>
+                            <td style="padding:7px 10px;">k = 2</td>
+                            <td style="padding:7px 10px;">0.1684</td>
+                            <td style="padding:7px 10px;">1.8458</td>
+                            <td style="padding:7px 10px;">1,866.8</td>
+                        </tr>
+                    </tbody>
+                </table>
+            """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+    # ── 7. PROJECT TEAM SECTION ──
+    with st.container(border=True):
+        st.markdown(f"""
+            <div class="cl-card-header">
+                <div class="cl-card-title">👥 Project Team & Academic Credits</div>
+                <div class="cl-card-sub">Machine Learning Capstone Project · Computer Science & Engineering</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        tm1, tm2, tm3 = st.columns(3, gap="medium")
+
+        with tm1:
+            st.markdown(f"""
+                <div class="cl-team-card">
+                    <div class="cl-team-avatar">RK</div>
+                    <div class="cl-team-info">
+                        <div class="cl-team-name">Metuku Rishit Kumar</div>
+                        <div class="cl-team-id">CB.SC.U4CSE24428</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with tm2:
+            st.markdown(f"""
+                <div class="cl-team-card">
+                    <div class="cl-team-avatar">RA</div>
+                    <div class="cl-team-info">
+                        <div class="cl-team-name">Karumuri Naga Sri Raghavendra Aditya</div>
+                        <div class="cl-team-id">CB.SC.U4CSE24423</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with tm3:
+            st.markdown(f"""
+                <div class="cl-team-card">
+                    <div class="cl-team-avatar">GS</div>
+                    <div class="cl-team-info">
+                        <div class="cl-team-name">Dusanapudi Ganesh Bala Sahit</div>
+                        <div class="cl-team-id">CB.SC.U4CSE24410</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+    # ── 8. SHORTCUTS & EXISTING DETAILED DASHBOARD INTELLIGENCE ──
+    with st.container(border=True):
+        st.markdown(f"""
+            <div class="cl-card-header">
+                <div class="cl-card-title">⚡ Quick Navigation & Deep-Dive Hubs</div>
+                <div class="cl-card-sub">Direct access to interactive experimentation labs and data exploration modules</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        sc1, sc2, sc3, sc4 = st.columns(4)
+        with sc1:
+            if st.button("🔎 Financial Explorer", key="sc_fe", use_container_width=True):
+                _go_to_page("Financial Explorer")
+                st.rerun()
+        with sc2:
+            if st.button("🎯 Prediction Center", key="sc_pc", use_container_width=True):
+                _go_to_page("Prediction Center")
+                st.rerun()
+        with sc3:
+            if st.button("📈 Regression Lab", key="sc_rl", use_container_width=True):
+                _go_to_page("Regression Lab")
+                st.rerun()
+        with sc4:
+            if st.button("🏷️ Classification Lab", key="sc_cl", use_container_width=True):
+                _go_to_page("Classification Lab")
+                st.rerun()
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+    # ── EXISTING EXECUTIVE VISUAL ANALYTICS (PRESERVED DASHBOARD CAPABILITIES) ──
+    st.markdown(f"""
+        <div class="cl-section-header">
+            <div class="cl-section-title">📊 Executive Financial Health Visualizer</div>
+            <div class="cl-section-sub">Empirical rating distributions, industry sector weights, and balance sheet correlations</div>
+        </div>
+    """, unsafe_allow_html=True)
+
     c_left, c_right = st.columns([7, 5], gap="medium")
 
     with c_left:
