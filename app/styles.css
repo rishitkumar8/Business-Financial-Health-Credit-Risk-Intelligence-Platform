@@ -15,17 +15,17 @@
     --border-light:         #E3D7C7; /* Soft light border */
 
     /* ── Accents ── */
-    --accent-mocha:         #927B68; /* Mocha secondary accent */
-    --accent-deep-mocha:    #705B49; /* Deep mocha strong accent */
+    --accent-mocha:         #6E5846; /* Mocha secondary accent (darkened from #927B68) */
+    --accent-deep-mocha:    #543F2F; /* Deep mocha strong accent (darkened from #705B49) */
 
     /* ── Typography & Neutrals ── */
-    --headings-text:        #514438; /* Espresso brown headings and strong text */
-    --body-text:            #625448; /* Warm charcoal-brown body text */
-    --text-muted:           #827567; /* Taupe gray muted text */
+    --headings-text:        #2B2016; /* Rich dark espresso headings and strong text (darkened from #514438) */
+    --body-text:            #3D3025; /* Dark warm charcoal-brown body text (darkened from #625448) */
+    --text-muted:           #5A4C3D; /* Deep warm taupe muted text (darkened from #827567) */
 
     /* ── Dark Feature Card ── */
-    --card-espresso:        #514438; /* Espresso dark feature card */
-    --text-on-espresso:     #F4EFE6; /* Warm cream text on dark feature card */
+    --card-espresso:        #2B2016; /* Deep espresso dark feature card */
+    --text-on-espresso:     #FAF6EF; /* Warm cream readable light text on dark feature card */
 
     /* ── Indicators ── */
     --indicator-positive:   #2E7D32; /* Forest green */
@@ -33,9 +33,9 @@
     --indicator-negative:   #C62828; /* Crimson red */
 
     /* ── Shadows & Radii ── */
-    --shadow-sm:            0 1px 4px rgba(81, 68, 56, 0.08);
-    --shadow-md:            0 4px 14px rgba(81, 68, 56, 0.12);
-    --shadow-lg:            0 8px 24px rgba(81, 68, 56, 0.16);
+    --shadow-sm:            0 1px 4px rgba(43, 32, 22, 0.08);
+    --shadow-md:            0 4px 14px rgba(43, 32, 22, 0.12);
+    --shadow-lg:            0 8px 24px rgba(43, 32, 22, 0.16);
     --radius-sm:            6px;
     --radius-md:            10px;
     --radius-lg:            14px;
@@ -65,6 +65,11 @@ html, body, [class*="css"] {
 /* Base text contrast enforcement */
 .stApp p, .stApp span, .stApp label, .stApp div:not([class*="cl-hero-result"]) {
     color: inherit;
+}
+
+b, strong {
+    color: var(--headings-text);
+    font-weight: 700;
 }
 
 /* ── Content Viewport ── */
@@ -227,17 +232,17 @@ div[data-testid="stMetricLabel"] p {
     text-overflow: unset !important;
     line-height: 1.25 !important;
 }
-div[data-testid="stMetricValue"] {
+div[data-testid="stMetricValue"],
+div[data-testid="stMetricValue"] * {
     font-size: 26px !important;
     font-weight: 800 !important;
-    color: var(--headings-text) !important; /* Espresso brown */
+    color: var(--headings-text) !important; /* Rich espresso */
     line-height: 1.15 !important;
     letter-spacing: -0.02em !important;
 }
 div[data-testid="stMetricDelta"] {
-    font-size: 11px !important;
+    font-size: 11.5px !important;
     font-weight: 600 !important;
-    color: var(--indicator-positive) !important;
     white-space: normal !important;
 }
 
@@ -301,6 +306,42 @@ div[data-baseweb="input"] input {
 }
 div[data-baseweb="input"] input::placeholder {
     color: var(--text-muted) !important;
+}
+
+/* Explicit Widget Labels & Captions Contrast */
+label[data-testid="stWidgetLabel"],
+label[data-testid="stWidgetLabel"] p,
+label[data-testid="stWidgetLabel"] span {
+    color: var(--headings-text) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+}
+
+div[data-testid="stCaptionContainer"],
+div[data-testid="stCaptionContainer"] p {
+    color: var(--text-muted) !important;
+    font-size: 12px !important;
+}
+
+code {
+    color: var(--accent-deep-mocha) !important;
+    background-color: var(--surface-secondary) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
+
+div[data-testid="stAlert"] p,
+div[data-testid="stAlert"] span {
+    color: var(--headings-text) !important;
+}
+
+div[data-testid="stTooltipContent"],
+div[data-baseweb="tooltip"] {
+    background-color: var(--headings-text) !important;
+    color: var(--text-on-espresso) !important;
 }
 
 /* Dropdown popover listbox readability */
@@ -743,6 +784,48 @@ div[data-testid="stTable"] td {
     background-color: var(--surface-card) !important;
     color: var(--body-text) !important;
     border-bottom: 1px solid var(--border-light) !important;
+}
+
+/* ── One-Line Inference Callout (Data-Grounded Capstone Annotations) ── */
+.cl-inference-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    background-color: var(--surface-secondary) !important; /* Soft sand #E8DCCB */
+    border-left: 3.5px solid var(--accent-deep-mocha) !important; /* Deep mocha #705B49 */
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+    padding: 9px 13px !important;
+    margin-top: 8px !important;
+    margin-bottom: 6px !important;
+    box-shadow: 0 1px 3px rgba(81, 68, 56, 0.05) !important;
+    transition: transform var(--transition-fast) !important;
+}
+.cl-inference-box:hover {
+    transform: translateX(2px);
+}
+.cl-inference-icon {
+    font-size: 13.5px !important;
+    line-height: 1.25 !important;
+    flex-shrink: 0 !important;
+}
+.cl-inference-text {
+    font-size: 12.5px !important;
+    line-height: 1.45 !important;
+    color: var(--headings-text) !important; /* Espresso #514438 */
+}
+.cl-inference-text b {
+    color: var(--accent-deep-mocha) !important;
+    font-weight: 700 !important;
+}
+
+/* ── Lab Control Toolbar ── */
+.cl-lab-toolbar {
+    background-color: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 14px 18px 10px 18px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
 }
 
 /* ── Accessibility: Reduced Motion ── */

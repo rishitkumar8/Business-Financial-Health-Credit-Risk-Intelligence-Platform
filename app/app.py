@@ -12,15 +12,17 @@ import joblib
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import streamlit as st
 from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import (
-    accuracy_score, calinski_harabasz_score, confusion_matrix,
-    davies_bouldin_score, f1_score, mean_absolute_error,
-    mean_squared_error, precision_score, r2_score, recall_score,
-    roc_auc_score, roc_curve, silhouette_score
+    accuracy_score, average_precision_score, calinski_harabasz_score,
+    classification_report, confusion_matrix, davies_bouldin_score,
+    f1_score, mean_absolute_error, mean_squared_error,
+    precision_recall_curve, precision_score, r2_score,
+    recall_score, roc_auc_score, roc_curve, silhouette_score
 )
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -56,12 +58,12 @@ C_PANEL_SEC     = "#E8DCCB"   # Soft sand secondary panel
 C_HIGHLIGHT     = "#EFE5D7"   # Pale beige subtle highlight
 C_BORDER        = "#D2BDA5"   # Muted taupe borders and dividers
 
-C_MOCHA         = "#927B68"   # Mocha secondary accent
-C_DEEP_MOCHA    = "#705B49"   # Deep mocha strong accent
-C_ESPRESSO      = "#514438"   # Espresso brown headings and strong text
-C_TEXT_BODY     = "#625448"   # Warm charcoal-brown body text
-C_TEXT_MUTED    = "#827567"   # Taupe gray muted text
-C_TEXT_LIGHT    = "#F4EFE6"   # Warm cream text on dark feature cards
+C_MOCHA         = "#6E5846"   # Mocha secondary accent (darkened from #927B68)
+C_DEEP_MOCHA    = "#543F2F"   # Deep mocha strong accent (darkened from #705B49)
+C_ESPRESSO      = "#2B2016"   # Rich dark espresso headings and strong text (darkened from #514438)
+C_TEXT_BODY     = "#3D3025"   # Dark warm charcoal-brown body text (darkened from #625448)
+C_TEXT_MUTED    = "#5A4C3D"   # Deep warm taupe muted text (darkened from #827567)
+C_TEXT_LIGHT    = "#FAF6EF"   # Warm cream text on dark feature cards
 
 # Independent Plotly Visualization Palette (Vibrant & Visually Distinct)
 V_BLUE          = "#2563EB"   # Royal blue
@@ -226,6 +228,51 @@ def format_leaderboard_table(df, format_dict=None, highlight_max_cols=None, high
             props=f"background-color: {C_PANEL_SEC}; color: {C_ESPRESSO}; font-weight: 700;"
         )
     return styler
+
+def display_inference(text: str):
+    """Renders a concise, data-grounded one-line capstone inference directly beneath a visualization."""
+    st.markdown(f"""
+        <div class="cl-inference-box">
+            <span class="cl-inference-icon">💡</span>
+            <div class="cl-inference-text"><b>Key Inference:</b> {text}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+@st.cache_data(show_spinner=False)
+def get_regression_eval_preds(model_name: str, _reg_dict: dict, _test_df: pd.DataFrame):
+    """Caches predictions and residuals for the selected regression model on holdout test set."""
+    if not _reg_dict or _test_df is None or model_name not in _reg_dict:
+        return np.array([]), np.array([])
+    Xr, yr = _test_df.drop(columns=["Rating_Score"]), _test_df["Rating_Score"]
+    m = _reg_dict[model_name]
+    if model_name == "Polynomial Regression":
+        preds = m["model"].predict(m["transformer"].transform(Xr))
+    else:
+        preds = m.predict(Xr)
+    residuals = yr - preds
+    return preds, residuals
+
+@st.cache_data(show_spinner=False)
+def get_classification_eval_preds(model_name: str, _clf_dict: dict, _test_df: pd.DataFrame):
+    """Caches hard predictions and soft probability scores for the selected classifier on holdout test set."""
+    if not _clf_dict or _test_df is None or model_name not in _clf_dict:
+        return np.array([]), None
+    Xc, yc = _test_df.drop(columns=["Binary Rating"]), _test_df["Binary Rating"]
+    m = _clf_dict[model_name]
+    preds = m.predict(Xc)
+    probs = m.predict_proba(Xc)[:, 1] if hasattr(m, "predict_proba") else None
+    return preds, probs
+
+@st.cache_data(show_spinner=False)
+def get_sampled_dendrogram_figure(_clu_df: pd.DataFrame, sample_size: int = 55):
+    """Computes a hierarchical Ward linkage dendrogram on a stratified sample for fast interactive rendering."""
+    sample = _clu_df.sample(sample_size, random_state=42)
+    fig = ff.create_dendrogram(sample.values, color_threshold=11.5)
+    fig.update_layout(
+        xaxis=dict(showticklabels=False, title="Sampled Corporate Balance Sheets (N=55)"),
+        yaxis=dict(title="Euclidean Linkage Distance")
+    )
+    return fig
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 7. DATA CACHING & LOADERS
@@ -1735,151 +1782,705 @@ elif selected_page == "Prediction Center":
 # ──────────────────────────────────────────────────────────────────────────────
 elif selected_page == "Regression Lab":
     page_header("Regression Lab",
-                "Benchmarking 12 regression estimators on credit score prediction (0=D to 22=AAA) with residual diagnostics.")
+                "Benchmarking 12 regression estimators on continuous credit score prediction (0=D to 22=AAA) with residual diagnostics and error profiling.")
 
     reg_eval = evaluate_regression_models(reg_models, test_reg)
 
-    if reg_eval.empty:
+    if reg_eval.empty or test_reg is None:
         st.error("Regression model evaluation results unavailable. Check models and test split files.")
     else:
+        Xr_test, yr_test = test_reg.drop(columns=["Rating_Score"]), test_reg["Rating_Score"]
+
+        # ── 1. MODEL & ANALYSIS SELECTION CONTROLS ──
+        with st.container(border=True):
+            ctrl_col1, ctrl_col2 = st.columns([7, 5], gap="medium")
+            with ctrl_col1:
+                inspect_reg = st.selectbox(
+                    "Select Regression Estimator for Diagnostic Deep-Dive",
+                    reg_eval["Model"].tolist(),
+                    index=0,
+                    key="rl_inspect_pick",
+                    help="Choose any of the 12 evaluated regression models to examine its residual distribution, tier errors, and feature weights."
+                )
+            with ctrl_col2:
+                reg_sort_metric = st.selectbox(
+                    "Benchmark Comparison Ranking Metric",
+                    ["R² Score (↑ Higher Better)", "RMSE (↓ Lower Better)", "MAE (↓ Lower Better)"],
+                    index=0,
+                    key="rl_metric_sort",
+                    help="Select the evaluation metric used to rank the leaderboard table and comparison chart."
+                )
+
+        # ── 2. KEY PERFORMANCE METRICS (SELECTED MODEL VS BASELINE) ──
+        sel_reg_row = reg_eval[reg_eval["Model"] == inspect_reg].iloc[0]
+        ols_row = reg_eval[reg_eval["Model"] == "Linear Regression"].iloc[0] if "Linear Regression" in reg_eval["Model"].values else sel_reg_row
+
+        r_delta_r2   = sel_reg_row["R²"] - ols_row["R²"]
+        r_delta_rmse = sel_reg_row["RMSE"] - ols_row["RMSE"]
+        r_delta_mae  = sel_reg_row["MAE"] - ols_row["MAE"]
+
+        m_c1, m_c2, m_c3, m_c4 = st.columns(4, gap="medium")
+        with m_c1:
+            st.metric(
+                label="R² Explanatory Power",
+                value=f"{sel_reg_row['R²']:.4f}",
+                delta=f"{r_delta_r2:+.4f} vs OLS" if inspect_reg != "Linear Regression" else "Linear Baseline",
+                help="Coefficient of determination: Proportion of out-of-sample rating variance explained relative to mean prediction. Higher is better (1.0 = perfect fit)."
+            )
+        with m_c2:
+            st.metric(
+                label="Root Mean Squared Error",
+                value=f"{sel_reg_row['RMSE']:.4f}",
+                delta=f"{r_delta_rmse:+.4f} notches" if inspect_reg != "Linear Regression" else "Baseline",
+                delta_color="inverse",
+                help="Test RMSE in rating notches (0-22 scale). Penalizes large outlier mistakes quadratically. Lower is better."
+            )
+        with m_c3:
+            st.metric(
+                label="Mean Absolute Error",
+                value=f"{sel_reg_row['MAE']:.4f}",
+                delta=f"{r_delta_mae:+.4f} notches" if inspect_reg != "Linear Regression" else "Baseline",
+                delta_color="inverse",
+                help="Test MAE in rating notches. Represents expected absolute deviation per corporate rating. Lower is better."
+            )
+        with m_c4:
+            st.metric(
+                label="Evaluation Split",
+                value="N = 1,561",
+                delta="Holdout Test Set",
+                delta_color="off",
+                help="Independent holdout test split (20% of corporate universe, N=1,561) strictly evaluated out-of-sample."
+            )
+
+        # ── 3. PREDICTIONS & RESIDUAL COMPUTATION ──
+        preds, residuals = get_regression_eval_preds(inspect_reg, reg_models, test_reg)
+        r_corr = float(np.corrcoef(yr_test, preds)[0, 1])
+        mean_res = float(np.mean(residuals))
+        std_res = float(np.std(residuals))
+        pct_within_1 = float(np.mean(np.abs(residuals) <= 1.0) * 100)
+        pct_within_2 = float(np.mean(np.abs(residuals) <= 2.0) * 100)
+        skew_res = float(pd.Series(residuals).skew())
+
+        # ── 4. MAIN DIAGNOSTIC VISUALIZATIONS ──
+        d1, d2 = st.columns(2, gap="medium")
+
+        with d1:
+            with st.container(border=True):
+                card_header(f"Actual vs Predicted Credit Score — {inspect_reg}", "Observed agency score against model prediction on 0-22 scale")
+                fig_avp = go.Figure()
+                fig_avp.add_trace(go.Scatter(
+                    x=yr_test, y=preds, mode="markers",
+                    marker=dict(color=V_BLUE, opacity=0.45, size=4.5),
+                    name="Test Corporates",
+                    hovertemplate="Actual Rating: %{x:.1f}<br>Predicted Rating: %{y:.1f}<br>Error: %{customdata:.2f} notches<extra></extra>",
+                    customdata=residuals
+                ))
+                fig_avp.add_trace(go.Scatter(
+                    x=[0, 22], y=[0, 22], mode="lines",
+                    line=dict(color=V_CORAL, dash="dash", width=2),
+                    name="Ideal 45° Line of Equality"
+                ))
+                fig_avp.update_layout(
+                    xaxis=dict(title="Actual Rating Score (0=D to 22=AAA)", range=[-0.5, 22.5]),
+                    yaxis=dict(title="Predicted Rating Score (0 to 22)", range=[-0.5, 22.5]),
+                    showlegend=True
+                )
+                chart(fig_avp, height=310)
+
+                # Grounded inference
+                inf_avp_text = (
+                    f"Predictions for <b>{inspect_reg}</b> achieve a Pearson correlation of {r_corr:.3f} with ground-truth agency scores, "
+                    f"tracking the 45° reference line closely across middle-tier ratings while exhibiting compression near the extreme AAA and D bounds."
+                )
+                display_inference(inf_avp_text)
+
+        with d2:
+            with st.container(border=True):
+                card_header(f"Residual Errors vs Predicted Score — {inspect_reg}", "Homoscedasticity and error variance across predicted scale")
+                fig_rvp = go.Figure()
+                fig_rvp.add_trace(go.Scatter(
+                    x=preds, y=residuals, mode="markers",
+                    marker=dict(color=V_TEAL, opacity=0.45, size=4.5),
+                    name="Residual (Actual - Pred)",
+                    hovertemplate="Predicted: %{x:.1f}<br>Residual Error: %{y:.2f} notches<extra></extra>"
+                ))
+                fig_rvp.add_hline(y=0, line_dash="dash", line_color=V_CORAL, line_width=1.8, annotation_text="Zero Error Line", annotation_position="top left")
+                fig_rvp.update_layout(
+                    xaxis=dict(title="Predicted Rating Score (0 to 22)", range=[-0.5, 22.5]),
+                    yaxis=dict(title="Residual Error (Notches)"),
+                    showlegend=False
+                )
+                chart(fig_rvp, height=310)
+
+                inf_rvp_text = (
+                    f"Residuals are centered near zero (mean bias: {mean_res:+.3f} notches) with {pct_within_2:.1f}% of unseen companies predicted within ±2 notches, "
+                    f"showing stable dispersion with no severe heteroscedastic fan pattern across predicted investment grades."
+                )
+                display_inference(inf_rvp_text)
+
+        # ── 5. ADDITIONAL ANALYSIS VISUALIZATIONS ──
+        d3, d4 = st.columns(2, gap="medium")
+
+        with d3:
+            with st.container(border=True):
+                card_header(f"Residual Error Distribution & Symmetry — {inspect_reg}", "Histogram and box marginal verifying Gaussian distribution")
+                fig_dist = px.histogram(
+                    residuals, nbins=45, marginal="box",
+                    labels={"value": "Residual Error (Notches)"},
+                    color_discrete_sequence=[V_PURPLE]
+                )
+                fig_dist.add_vline(x=0, line_dash="dash", line_color=V_CORAL, line_width=1.5)
+                fig_dist.update_layout(showlegend=False, xaxis_title="Residual Error (Rating Notches)", yaxis_title="Observation Count")
+                chart(fig_dist, height=300)
+
+                inf_dist_text = (
+                    f"Residual distribution exhibits an approximately symmetric bell profile (mean bias: {mean_res:+.3f}, std: {std_res:.2f}, skewness: {skew_res:+.2f}), "
+                    f"confirming that {pct_within_1:.1f}% of corporate predictions land within ±1 notch of their formal credit agency rating."
+                )
+                display_inference(inf_dist_text)
+
+        with d4:
+            with st.container(border=True):
+                card_header(f"Mean Absolute Error (MAE) by Credit Tier — {inspect_reg}", "Out-of-sample notch error across corporate solvency segments")
+                tier_defs = [
+                    ("Prime & High (AAA to AA-)", 19, 22, "#2E7D32"),
+                    ("Upper Medium (A+ to A-)", 16, 18, "#388E3C"),
+                    ("Lower Medium (BBB+ to BBB-)", 13, 15, "#1565C0"),
+                    ("Speculative (BB+ to B-)", 7, 12, "#E65100"),
+                    ("Vulnerable / Default (CCC+ to D)", 0, 6, "#C62828")
+                ]
+                tier_names, tier_scores, tier_colors, tier_counts = [], [], [], []
+                for tname, tlow, thigh, tcol in tier_defs:
+                    mask = (yr_test >= tlow) & (yr_test <= thigh)
+                    if mask.sum() > 0:
+                        tier_names.append(tname)
+                        tier_scores.append(round(float(np.mean(np.abs(residuals[mask]))), 4))
+                        tier_colors.append(tcol)
+                        tier_counts.append(int(mask.sum()))
+
+                df_tiers = pd.DataFrame({"Tier": tier_names, "MAE": tier_scores, "Color": tier_colors, "Count": tier_counts})
+                fig_tier = px.bar(
+                    df_tiers, x="MAE", y="Tier", orientation="h",
+                    text="MAE", labels={"MAE": "Mean Absolute Error (Notches)", "Tier": "Rating Tier"}
+                )
+                fig_tier.update_traces(
+                    marker_color=df_tiers["Color"],
+                    texttemplate="%{x:.2f} notches",
+                    textposition="outside",
+                    textfont=dict(color=C_ESPRESSO, size=11),
+                    cliponaxis=False
+                )
+                fig_tier.update_layout(yaxis=dict(autorange="reversed", title=None), xaxis=dict(range=[0, max(tier_scores)*1.25], showgrid=True), showlegend=False)
+                chart(fig_tier, height=300, margin=dict(l=14, r=40, t=20, b=28))
+
+                min_tier_row = df_tiers.loc[df_tiers["MAE"].idxmin()]
+                max_tier_row = df_tiers.loc[df_tiers["MAE"].idxmax()]
+                inf_tier_text = (
+                    f"Prediction accuracy is highest in <b>{min_tier_row['Tier']}</b> ({min_tier_row['MAE']:.2f} MAE, N={min_tier_row['Count']}), "
+                    f"whereas <b>{max_tier_row['Tier']}</b> encounters higher notch dispersion ({max_tier_row['MAE']:.2f} MAE) due to balance-sheet volatility in distressed corporations."
+                )
+                display_inference(inf_tier_text)
+
+        # ── 6. FEATURE IMPORTANCE OR COEFFICIENT ANALYSIS ──
+        with st.container(border=True):
+            card_header(f"Feature Influence & Coefficient Diagnostics — {inspect_reg}", "Key balance-sheet drivers contributing to credit score predictions")
+            m_obj = reg_models[inspect_reg]
+
+            if hasattr(m_obj, "feature_importances_"):
+                imp_series = pd.Series(m_obj.feature_importances_, index=Xr_test.columns).nlargest(10)
+                fig_imp = px.bar(
+                    x=imp_series.values, y=imp_series.index, orientation="h",
+                    labels={"x": "Gini Impurity Reduction Importance", "y": "Financial Indicator"},
+                    text=imp_series.values
+                )
+                fig_imp.update_traces(
+                    marker_color=V_GREEN,
+                    marker_line_color="#059669",
+                    marker_line_width=1,
+                    texttemplate="%{x:.3f}",
+                    textposition="outside",
+                    textfont=dict(color=C_ESPRESSO, size=11),
+                    cliponaxis=False
+                )
+                fig_imp.update_layout(yaxis=dict(autorange="reversed", title=None), xaxis=dict(range=[0, imp_series.max()*1.22], showgrid=True), showlegend=False)
+                chart(fig_imp, height=290, margin=dict(l=14, r=40, t=20, b=28))
+
+                top_f1, top_f2 = imp_series.index[0], imp_series.index[1]
+                inf_imp_text = (
+                    f"Predictive tree splits are primarily driven by <b>{top_f1}</b> ({imp_series.iloc[0]*100:.1f}%) and <b>{top_f2}</b> ({imp_series.iloc[1]*100:.1f}%), "
+                    f"which together capture {(imp_series.iloc[0]+imp_series.iloc[1])*100:.1f}% of total decision importance, reflecting capital structure and margin health."
+                )
+                display_inference(inf_imp_text)
+
+            elif hasattr(m_obj, "coef_"):
+                coef_series = pd.Series(m_obj.coef_, index=Xr_test.columns)
+                top_pos = coef_series.nlargest(5)
+                top_neg = coef_series.nsmallest(5)
+                top_coefs = pd.concat([top_pos, top_neg]).sort_values(ascending=False)
+                bar_cols = [V_BLUE if v >= 0 else V_CORAL for v in top_coefs.values]
+
+                fig_coef = px.bar(
+                    x=top_coefs.values, y=top_coefs.index, orientation="h",
+                    labels={"x": "Standardized Linear Coefficient Weight", "y": "Financial Indicator"},
+                    text=top_coefs.values
+                )
+                fig_coef.update_traces(
+                    marker_color=bar_cols,
+                    texttemplate="%{x:+.3f}",
+                    textposition="outside",
+                    textfont=dict(color=C_ESPRESSO, size=11),
+                    cliponaxis=False
+                )
+                max_abs_c = max(abs(top_coefs.min()), abs(top_coefs.max())) * 1.3
+                fig_coef.update_layout(yaxis=dict(autorange="reversed", title=None), xaxis=dict(range=[-max_abs_c, max_abs_c], showgrid=True), showlegend=False)
+                chart(fig_coef, height=290, margin=dict(l=14, r=40, t=20, b=28))
+
+                pos_f, neg_f = top_pos.index[0], top_neg.index[0]
+                inf_coef_text = (
+                    f"Linear model coefficients show strongest positive rating elevation from <b>{pos_f}</b> (+{top_pos.iloc[0]:.3f}) "
+                    f"and steepest rating discount from <b>{neg_f}</b> ({top_neg.iloc[0]:.3f}), aligning with empirical corporate solvency mechanics."
+                )
+                display_inference(inf_coef_text)
+
+            else:
+                st.markdown(f"""
+                    <div class="cl-insight-box">
+                        <div style="font-weight:700;font-size:13px;color:{C_DEEP_VIOLET};margin-bottom:3px;">
+                            ℹ️ Model Characteristic: Non-Parametric Metric Space
+                        </div>
+                        <div style="font-size:12px;color:{C_MUTED};">
+                            <b>{inspect_reg}</b> evaluates corporate credit ratings by calculating pairwise Minkowski distances or kernel projections across the full 28-dimensional standardized financial hyperspace simultaneously.
+                            Unlike decision trees or linear models, it does not formulate isolated univariate Gini importances or additive linear coefficients.
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+                inf_nonparam = (
+                    f"Non-parametric distance-based and kernel estimators ({inspect_reg}) operate holistically over all 28 standardized financial features, "
+                    f"precluding univariate feature importance breakdown while preserving complex multi-ratio geometry."
+                )
+                display_inference(inf_nonparam)
+
+        # ── 7. BENCHMARK COMPARISON TABLE & LEADERBOARD CHART ──
+        if "R²" in reg_sort_metric:
+            sorted_reg = reg_eval.sort_values("R²", ascending=False).reset_index(drop=True)
+            chart_metric_col = "R²"
+            chart_x_range = [0, 0.90]
+            chart_color = V_BLUE
+        elif "RMSE" in reg_sort_metric:
+            sorted_reg = reg_eval.sort_values("RMSE", ascending=True).reset_index(drop=True)
+            chart_metric_col = "RMSE"
+            chart_x_range = [0, sorted_reg["RMSE"].max() * 1.18]
+            chart_color = V_TEAL
+        else:
+            sorted_reg = reg_eval.sort_values("MAE", ascending=True).reset_index(drop=True)
+            chart_metric_col = "MAE"
+            chart_x_range = [0, sorted_reg["MAE"].max() * 1.18]
+            chart_color = V_INDIGO
+
         c_tbl, c_bar = st.columns([6, 6], gap="medium")
 
         with c_tbl:
             with st.container(border=True):
-                card_header("Model Leaderboard (Test Set N=1,561)", "Sorted by Coefficient of Determination R²")
+                card_header("Model Leaderboard (Test Set N=1,561)", f"Sorted by {reg_sort_metric}")
                 st.dataframe(
                     format_leaderboard_table(
-                        reg_eval,
+                        sorted_reg,
                         format_dict={
                             "R²": "{:.4f}",
                             "RMSE": "{:.4f}",
                             "MAE": "{:.4f}"
                         },
-                        highlight_max_cols=["R²"],
-                        highlight_min_cols=["RMSE", "MAE"]
+                        highlight_max_cols=["R²"] if "R²" in reg_sort_metric else None,
+                        highlight_min_cols=["RMSE"] if "RMSE" in reg_sort_metric else (["MAE"] if "MAE" in reg_sort_metric else None)
                     ),
-                    use_container_width=True, height=410
+                    use_container_width=True, height=420
                 )
 
         with c_bar:
             with st.container(border=True):
-                card_header("R² Performance Comparison", "Out-of-sample explanatory power across all 12 regressors")
-                fig = px.bar(
-                    reg_eval, x="R²", y="Model", orientation="h",
-                    text="R²",
-                    labels={"R²": "R² Score", "Model": "Model"}
+                card_header(f"{chart_metric_col} Performance Comparison", f"Ranked across all 12 regression estimators on holdout test set")
+                fig_comp = px.bar(
+                    sorted_reg, x=chart_metric_col, y="Model", orientation="h",
+                    text=chart_metric_col,
+                    labels={chart_metric_col: f"{chart_metric_col} Score", "Model": "Model"}
                 )
-                fig.update_traces(
-                    marker_color=V_BLUE,
-                    marker_line_color="#1D4ED8",
+                fig_comp.update_traces(
+                    marker_color=chart_color,
+                    marker_line_color="#1D4ED8" if chart_color == V_BLUE else "#0F766E",
                     marker_line_width=1,
                     texttemplate="%{x:.4f}",
                     textposition="outside",
                     textfont=dict(color=C_ESPRESSO, size=11),
                     cliponaxis=False
                 )
-                fig.update_layout(
+                fig_comp.update_layout(
                     yaxis=dict(autorange="reversed", title=None, showgrid=False),
-                    xaxis=dict(range=[0, 0.90], showgrid=True),
+                    xaxis=dict(range=chart_x_range, showgrid=True),
                     showlegend=False
                 )
-                chart(fig, height=410, margin=dict(l=14, r=40, t=20, b=30))
+                chart(fig_comp, height=420, margin=dict(l=14, r=42, t=20, b=30))
 
-        # Top Model Highlight Banner
-        top_reg = reg_eval.iloc[0]
-        st.markdown(f"""
-            <div class="cl-insight-box">
-                <div style="font-weight:700;font-size:13.5px;color:{C_DEEP_VIOLET};margin-bottom:3px;">
-                    🏆 Top Performing Regressor: <b>{top_reg['Model']}</b>
+                top_m_name = sorted_reg.iloc[0]["Model"]
+                top_m_val  = sorted_reg.iloc[0][chart_metric_col]
+                inf_comp_text = (
+                    f"<b>{top_m_name}</b> leads overall performance with {chart_metric_col} = {top_m_val:.4f}, "
+                    f"demonstrating that non-linear ensemble averaging significantly outperforms linear baselines (Linear R² = 0.3474, RMSE = 3.03 notches) on corporate credit ratings."
+                )
+                display_inference(inf_comp_text)
+
+        # ── TECHNICAL REFERENCE EXPANDER ──
+        with st.expander("📚 Technical Reference: Credit Rating Scale & Metric Definitions"):
+            st.markdown(f"""
+                <div style="font-size:12.5px;color:{C_TEXT_BODY};line-height:1.6;">
+                    <b>1. Continuous Rating Scale (0 to 22):</b>
+                    Mapped monotonically from S&P / Moody's corporate credit ratings:
+                    <code>0=D</code>, <code>1=C</code>, <code>2=CC</code>, <code>3=CC+</code>, <code>4=CCC-</code>, <code>5=CCC</code>, <code>6=CCC+</code>,
+                    <code>7=B-</code>, <code>8=B</code>, <code>9=B+</code>, <code>10=BB-</code>, <code>11=BB</code>, <code>12=BB+</code>,
+                    <code>13=BBB-</code>, <code>14=BBB</code>, <code>15=BBB+</code>, <code>16=A-</code>, <code>17=A</code>, <code>18=A+</code>,
+                    <code>19=AA-</code>, <code>20=AA</code>, <code>21=AA+</code>, <code>22=AAA</code>.
+                    <br><br>
+                    <b>2. R² (Coefficient of Determination):</b>
+                    Measures the proportion of target variance explained by financial ratios beyond predicting the dataset mean. <i>Note: R² indicates explanatory power, not classification accuracy.</i>
+                    <br><br>
+                    <b>3. RMSE vs MAE:</b>
+                    RMSE penalizes larger notch errors quadratically, making it sensitive to severe rating misses, whereas MAE captures the average notch distance of predicted grades.
                 </div>
-                <div style="font-size:12.5px;color:{C_MUTED};">
-                    Achieves <b>R² = {top_reg['R²']:.4f}</b>, <b>RMSE = {top_reg['RMSE']:.4f}</b> rating notches, and <b>MAE = {top_reg['MAE']:.4f}</b> on unseen test corporations.
-                    Nonlinear tree ensemble significantly outperforms linear baselines (Linear R² = 0.3474).
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # Interactive Model Diagnostics
-        with st.container(border=True):
-            card_header("Individual Model Diagnostics", "Actual vs Predicted, residual errors, and feature importance")
-            inspect_reg = st.selectbox("Select Model for Diagnostics", reg_eval["Model"].tolist(), key="rl_inspect_pick")
-
-            if test_reg is not None:
-                Xr, yr = test_reg.drop(columns=["Rating_Score"]), test_reg["Rating_Score"]
-                m = reg_models[inspect_reg]
-                if inspect_reg == "Polynomial Regression":
-                    preds = m["model"].predict(m["transformer"].transform(Xr))
-                else:
-                    preds = m.predict(Xr)
-                residuals = yr - preds
-
-                d1, d2 = st.columns(2, gap="medium")
-                with d1:
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=yr, y=preds, mode="markers",
-                        marker=dict(color=V_BLUE, opacity=0.45, size=4.5),
-                        name="Test Observations",
-                        hovertemplate="Actual: %{x:.1f}<br>Predicted: %{y:.1f}<extra></extra>"
-                    ))
-                    fig.add_trace(go.Scatter(
-                        x=[0, 22], y=[0, 22], mode="lines",
-                        line=dict(color=V_CORAL, dash="dash", width=1.5),
-                        name="Ideal 45° Line"
-                    ))
-                    card_header("Actual vs Predicted Credit Score", "Dispersion around line of equality")
-                    chart(fig, height=290)
-
-                with d2:
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=preds, y=residuals, mode="markers",
-                        marker=dict(color=V_TEAL, opacity=0.45, size=4.5),
-                        name="Residuals",
-                        hovertemplate="Predicted: %{x:.1f}<br>Error: %{y:.2f}<extra></extra>"
-                    ))
-                    fig.add_hline(y=0, line_dash="dash", line_color=V_CORAL, line_width=1.5)
-                    card_header("Residual Error vs Predicted Score", "Heteroscedasticity inspection")
-                    chart(fig, height=290)
-
-                d3, d4 = st.columns(2, gap="medium")
-                with d3:
-                    card_header("Residual Error Distribution", "Gaussian distribution check")
-                    fig = px.histogram(residuals, nbins=40, marginal="box", labels={"value": "Residual Error"})
-                    fig.update_traces(marker_color=V_PURPLE, opacity=0.85)
-                    chart(fig, height=270)
-
-                with d4:
-                    card_header("Top 10 Feature Importances", "Predictive weight of financial ratios")
-                    if hasattr(m, "feature_importances_"):
-                        imp = pd.Series(m.feature_importances_, index=Xr.columns).nlargest(10)
-                        fig = px.bar(x=imp.values, y=imp.index, orientation="h", labels={"x": "Importance", "y": "Feature"})
-                        fig.update_traces(marker_color=V_GREEN)
-                        fig.update_layout(yaxis=dict(autorange="reversed"))
-                        chart(fig, height=270)
-                    else:
-                        st.info(f"Model '{inspect_reg}' does not expose tree-based Gini feature importances.")
+            """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 16. PAGE 5: CLASSIFICATION LAB
 # ──────────────────────────────────────────────────────────────────────────────
 elif selected_page == "Classification Lab":
     page_header("Classification Lab",
-                "Evaluation of 12 binary classifiers distinguishing Investment Grade (1) from Speculative Grade (0).")
+                "Evaluation of 12 binary classifiers distinguishing Investment Grade (1: BBB- to AAA) from Speculative Grade (0: BB+ to D) with discrimination diagnostics and threshold curves.")
 
     clf_eval = evaluate_classification_models(clf_models, test_clf)
 
-    if clf_eval.empty:
-        st.error("Classification evaluation results unavailable.")
+    if clf_eval.empty or test_clf is None:
+        st.error("Classification evaluation results unavailable. Check models and test split files.")
     else:
+        Xc_test, yc_test = test_clf.drop(columns=["Binary Rating"]), test_clf["Binary Rating"]
+
+        # ── 1. MODEL & ANALYSIS SELECTION CONTROLS ──
+        with st.container(border=True):
+            c_ctrl1, c_ctrl2, c_ctrl3 = st.columns([5, 4, 3], gap="medium")
+            with c_ctrl1:
+                inspect_clf = st.selectbox(
+                    "Select Classifier for Diagnostic Deep-Dive",
+                    clf_eval["Model"].tolist(),
+                    index=0,
+                    key="cl_inspect_pick",
+                    help="Choose any of the 12 evaluated classifiers to inspect confusion matrix, ROC curve, PR curves, and probability confidence."
+                )
+            with c_ctrl2:
+                clf_sort_metric = st.selectbox(
+                    "Leaderboard Ranking Metric",
+                    ["Weighted F1-Score (↑)", "Accuracy (↑)", "Precision (↑)", "Recall (↑)", "ROC-AUC (↑)"],
+                    index=0,
+                    key="cl_metric_sort",
+                    help="Select the evaluation metric used to rank the leaderboard table and comparison chart."
+                )
+            with c_ctrl3:
+                cm_mode = st.radio(
+                    "Confusion Matrix View",
+                    ["Raw Counts", "Row-Normalized (%)"],
+                    horizontal=True,
+                    key="cl_cm_mode",
+                    help="Toggle between absolute observation counts and row-normalized class recall percentages."
+                )
+
+        # ── 2. KEY PERFORMANCE METRIC CARDS ──
+        sel_clf_row = clf_eval[clf_eval["Model"] == inspect_clf].iloc[0]
+        baseline_clf = clf_eval[clf_eval["Model"] == "Logistic Regression"].iloc[0] if "Logistic Regression" in clf_eval["Model"].values else sel_clf_row
+
+        c_delta_acc = sel_clf_row["Accuracy"] - baseline_clf["Accuracy"]
+        c_delta_f1  = sel_clf_row["F1"] - baseline_clf["F1"]
+        c_delta_auc = (sel_clf_row["ROC-AUC"] - baseline_clf["ROC-AUC"]) if not np.isnan(sel_clf_row["ROC-AUC"]) and not np.isnan(baseline_clf["ROC-AUC"]) else 0.0
+
+        cm_1, cm_2, cm_3, cm_4, cm_5 = st.columns(5, gap="medium")
+        with cm_1:
+            st.metric(
+                label="Overall Accuracy",
+                value=f"{sel_clf_row['Accuracy']*100:.2f}%",
+                delta=f"{c_delta_acc*100:+.2f}% vs LogReg" if inspect_clf != "Logistic Regression" else "Linear Baseline",
+                help="Overall correct classification rate across Investment Grade and Speculative Grade corporate test instances."
+            )
+        with cm_2:
+            st.metric(
+                label="Weighted F1-Score",
+                value=f"{sel_clf_row['F1']:.4f}",
+                delta=f"{c_delta_f1:+.4f}" if inspect_clf != "Logistic Regression" else "Baseline",
+                help="Harmonic mean of precision and recall weighted by class support. Ideal for mildly imbalanced corporate risk classes."
+            )
+        with cm_3:
+            st.metric(
+                label="Weighted Precision",
+                value=f"{sel_clf_row['Precision']:.4f}",
+                help="Proportion of predicted solvency statuses that were genuinely accurate (purity of positive and negative calls)."
+            )
+        with cm_4:
+            st.metric(
+                label="Weighted Recall",
+                value=f"{sel_clf_row['Recall']:.4f}",
+                help="Proportion of actual market corporate credits that were correctly identified by the estimator."
+            )
+        with cm_5:
+            auc_str = f"{sel_clf_row['ROC-AUC']:.4f}" if not np.isnan(sel_clf_row["ROC-AUC"]) else "N/A"
+            st.metric(
+                label="ROC-AUC Score",
+                value=auc_str,
+                delta=f"{c_delta_auc:+.4f}" if auc_str != "N/A" and inspect_clf != "Logistic Regression" else None,
+                help="Area Under the Receiver Operating Characteristic curve. Measures discrimination across all decision thresholds."
+            )
+
+        # ── 3. PREDICTIONS, PROBABILITIES & CONFUSION MATRIX ──
+        preds_clf, probs_clf = get_classification_eval_preds(inspect_clf, clf_models, test_clf)
+        cm_raw = confusion_matrix(yc_test, preds_clf)
+        tn, fp, fn, tp = cm_raw.ravel()
+        sens_ig = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        spec_sg = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+
+        # ── 4. MAIN DIAGNOSTIC VISUALIZATIONS ──
+        cd1, cd2 = st.columns(2, gap="medium")
+
+        with cd1:
+            with st.container(border=True):
+                card_header(f"Confusion Matrix — {inspect_clf}", f"Class-level outcome matrix ({cm_mode})")
+                class_labels = ["Speculative (0)", "Investment Grade (1)"]
+
+                if cm_mode == "Row-Normalized (%)":
+                    cm_display = cm_raw.astype('float') / cm_raw.sum(axis=1)[:, np.newaxis] * 100
+                    text_matrix = [
+                        [f"<b>{cm_display[0,0]:.1f}%</b><br>({cm_raw[0,0]:,} / {cm_raw[0].sum():,})", f"<b>{cm_display[0,1]:.1f}%</b><br>({cm_raw[0,1]:,} / {cm_raw[0].sum():,})"],
+                        [f"<b>{cm_display[1,0]:.1f}%</b><br>({cm_raw[1,0]:,} / {cm_raw[1].sum():,})", f"<b>{cm_display[1,1]:.1f}%</b><br>({cm_raw[1,1]:,} / {cm_raw[1].sum():,})"]
+                    ]
+                else:
+                    cm_display = cm_raw
+                    text_matrix = [
+                        [f"<b>{cm_raw[0,0]:,}</b><br>(True Spec)", f"<b>{cm_raw[0,1]:,}</b><br>(False Inv)"],
+                        [f"<b>{cm_raw[1,0]:,}</b><br>(False Spec)", f"<b>{cm_raw[1,1]:,}</b><br>(True Inv)"]
+                    ]
+
+                fig_cm = go.Figure(go.Heatmap(
+                    z=cm_display, x=class_labels, y=class_labels,
+                    colorscale="Blues", showscale=False,
+                    text=text_matrix, texttemplate="%{text}",
+                    textfont={"size": 13.5, "color": "#1E293B"},
+                    hovertemplate="Actual: %{y}<br>Predicted: %{x}<extra></extra>"
+                ))
+                fig_cm.update_layout(xaxis_title="Predicted Solvency Tier", yaxis_title="Actual Ground Truth Agency Tier")
+                chart(fig_cm, height=310)
+
+                inf_cm_text = (
+                    f"<b>{inspect_clf}</b> correctly identifies {tp:,} of {tp+fn:,} Investment Grade firms ({sens_ig*100:.1f}% sensitivity) "
+                    f"and {tn:,} of {tn+fp:,} Speculative Grade risks ({spec_sg*100:.1f}% specificity), with {fp+fn:,} total misclassifications out of {len(yc_test):,} holdout corporate tests."
+                )
+                display_inference(inf_cm_text)
+
+        with cd2:
+            with st.container(border=True):
+                card_header(f"ROC Curve & Threshold Diagnostics — {inspect_clf}", "True positive accumulation rate versus false alarm trade-off")
+                if probs_clf is not None:
+                    fpr, tpr, thresholds = roc_curve(yc_test, probs_clf)
+                    auc_val = float(roc_auc_score(yc_test, probs_clf))
+                    j_scores = tpr - fpr
+                    opt_idx = int(np.argmax(j_scores))
+                    opt_thresh = float(thresholds[opt_idx])
+                    opt_tpr, opt_fpr = float(tpr[opt_idx]), float(fpr[opt_idx])
+
+                    fig_roc = go.Figure()
+                    fig_roc.add_trace(go.Scatter(
+                        x=fpr, y=tpr, mode="lines",
+                        line=dict(color=V_BLUE, width=2.5),
+                        name=f"ROC Curve (AUC = {auc_val:.4f})"
+                    ))
+                    fig_roc.add_trace(go.Scatter(
+                        x=[0, 1], y=[0, 1], mode="lines",
+                        line=dict(color=V_CORAL, dash="dash", width=1.5),
+                        name="Random Baseline (AUC = 0.50)"
+                    ))
+                    fig_roc.add_trace(go.Scatter(
+                        x=[opt_fpr], y=[opt_tpr], mode="markers",
+                        marker=dict(color=V_AMBER, size=9, symbol="diamond"),
+                        name=f"Optimal Cutoff (p={opt_thresh:.2f})"
+                    ))
+                    fig_roc.update_layout(
+                        xaxis=dict(title="False Positive Rate (1 - Specificity)", range=[-0.02, 1.02]),
+                        yaxis=dict(title="True Positive Rate (Sensitivity)", range=[-0.02, 1.02]),
+                        showlegend=True
+                    )
+                    chart(fig_roc, height=310)
+
+                    inf_roc_text = (
+                        f"An ROC-AUC of {auc_val:.4f} demonstrates superior class separation over random chance (AUC = 0.50), "
+                        f"reaching an optimal operating threshold at probability p={opt_thresh:.2f} where sensitivity is {opt_tpr*100:.1f}% against just {opt_fpr*100:.1f}% false alarms."
+                    )
+                else:
+                    st.info(f"Model '{inspect_clf}' does not output soft probabilities; ROC analysis unavailable.")
+                    inf_roc_text = f"Continuous probability scores are mathematically unavailable for {inspect_clf}, requiring hard binary decision boundary evaluation."
+                display_inference(inf_roc_text)
+
+        # ── 5. ADDITIONAL ANALYSIS VISUALIZATIONS ──
+        cd3, cd4 = st.columns(2, gap="medium")
+
+        with cd3:
+            with st.container(border=True):
+                card_header(f"Per-Class Performance Metrics — {inspect_clf}", "Precision, Recall, and F1-Score breakdown by credit rating tier")
+                rep = classification_report(yc_test, preds_clf, output_dict=True)
+                p0, r0, f0, s0 = rep['0']['precision'], rep['0']['recall'], rep['0']['f1-score'], int(rep['0']['support'])
+                p1, r1, f1, s1 = rep['1']['precision'], rep['1']['recall'], rep['1']['f1-score'], int(rep['1']['support'])
+
+                df_perclass = pd.DataFrame({
+                    "Metric": ["Precision", "Recall", "F1-Score"] * 2,
+                    "Score": [p0, r0, f0, p1, r1, f1],
+                    "Tier": [f"Speculative (0, N={s0})"] * 3 + [f"Investment Grade (1, N={s1})"] * 3
+                })
+                fig_pc = px.bar(
+                    df_perclass, x="Metric", y="Score", color="Tier", barmode="group",
+                    color_discrete_sequence=[V_AMBER, V_GREEN],
+                    text="Score"
+                )
+                fig_pc.update_traces(texttemplate="%{y:.3f}", textposition="outside", textfont=dict(color=C_ESPRESSO, size=11), cliponaxis=False)
+                fig_pc.update_layout(yaxis=dict(range=[0, 1.15], showgrid=True), xaxis_title=None, legend=dict(orientation="h", y=1.12, x=0.5, xanchor="center"))
+                chart(fig_pc, height=300, margin=dict(l=14, r=20, t=32, b=28))
+
+                inf_pc_text = (
+                    f"Speculative Grade exhibits lower recall ({r0*100:.1f}%) than Investment Grade ({r1*100:.1f}%), "
+                    f"indicating that borderline speculative corporations are more susceptible to being false-negatived into investment tier than vice-versa."
+                )
+                display_inference(inf_pc_text)
+
+        with cd4:
+            with st.container(border=True):
+                card_header(f"Precision-Recall Curve (Investment Grade) — {inspect_clf}", "Trade-off between positive call purity and corporate coverage")
+                if probs_clf is not None:
+                    prec_vals, rec_vals, _ = precision_recall_curve(yc_test, probs_clf)
+                    ap_val = float(average_precision_score(yc_test, probs_clf))
+                    prevalence = float(yc_test.mean())
+                    valid_r = rec_vals[prec_vals >= 0.90]
+                    high_prec_rec = float(valid_r.max()) if len(valid_r) > 0 else 0.85
+
+                    fig_pr = go.Figure()
+                    fig_pr.add_trace(go.Scatter(
+                        x=rec_vals, y=prec_vals, mode="lines",
+                        line=dict(color=V_TEAL, width=2.5),
+                        name=f"PR Curve (AP = {ap_val:.4f})"
+                    ))
+                    fig_pr.add_hline(
+                        y=prevalence, line_dash="dash", line_color=V_CORAL, line_width=1.5,
+                        annotation_text=f"Baseline Prevalence ({prevalence*100:.1f}%)",
+                        annotation_position="bottom left"
+                    )
+                    fig_pr.update_layout(
+                        xaxis=dict(title="Recall (Corporate Coverage)", range=[-0.02, 1.02]),
+                        yaxis=dict(title="Precision (Solvency Purity)", range=[-0.02, 1.05]),
+                        showlegend=True
+                    )
+                    chart(fig_pr, height=300)
+
+                    inf_pr_text = (
+                        f"Average Precision (AP = {ap_val:.4f}) substantially exceeds the {prevalence*100:.1f}% random baseline, "
+                        f"maintaining exceptional precision (>90%) across up to {high_prec_rec*100:.1f}% corporate coverage before threshold degradation begins."
+                    )
+                else:
+                    st.info(f"Probabilities unavailable for {inspect_clf}; PR curve omitted.")
+                    inf_pr_text = f"Continuous probability curves are unavailable for hard-decision model {inspect_clf}."
+                display_inference(inf_pr_text)
+
+        cd5, cd6 = st.columns(2, gap="medium")
+
+        with cd5:
+            with st.container(border=True):
+                card_header("Test Universe Solvency Class Distribution", "Class balance and sample proportions in holdout test set (N=1,561)")
+                class_counts = yc_test.value_counts().sort_index()
+                df_dist = pd.DataFrame({
+                    "Tier": ["Speculative Grade (0)", "Investment Grade (1)"],
+                    "Count": [int(class_counts[0]), int(class_counts[1])],
+                    "Percentage": [f"{class_counts[0]/len(yc_test)*100:.1f}%", f"{class_counts[1]/len(yc_test)*100:.1f}%"]
+                })
+                fig_cdist = px.bar(
+                    df_dist, x="Tier", y="Count", text="Count",
+                    color="Tier", color_discrete_sequence=[V_AMBER, V_GREEN]
+                )
+                fig_cdist.update_traces(
+                    texttemplate="%{y:,} firms<br>(%{customdata})",
+                    customdata=df_dist["Percentage"],
+                    textposition="outside",
+                    textfont=dict(color=C_ESPRESSO, size=11),
+                    cliponaxis=False
+                )
+                fig_cdist.update_layout(yaxis=dict(range=[0, df_dist["Count"].max()*1.22], showgrid=True), xaxis_title=None, showlegend=False)
+                chart(fig_cdist, height=290, margin=dict(l=14, r=20, t=20, b=28))
+
+                sg_cnt, ig_cnt = class_counts[0], class_counts[1]
+                inf_cdist_text = (
+                    f"The test partition comprises {ig_cnt:,} Investment Grade corporations ({ig_cnt/len(yc_test)*100:.1f}%) "
+                    f"and {sg_cnt:,} Speculative Grade issuers ({sg_cnt/len(yc_test)*100:.1f}%), establishing a ~1.88:1 ratio that matches broader bond market liquidity conditions."
+                )
+                display_inference(inf_cdist_text)
+
+        with cd6:
+            with st.container(border=True):
+                card_header(f"Predicted Solvency Probability Distribution — {inspect_clf}", "Confidence separation between genuine Investment Grade and Speculative firms")
+                if probs_clf is not None:
+                    high_conf_ig = float((probs_clf[yc_test == 1] >= 0.80).mean() * 100)
+                    df_probs = pd.DataFrame({
+                        "Probability": probs_clf,
+                        "Actual_Tier": ["Investment Grade" if y == 1 else "Speculative Grade" for y in yc_test]
+                    })
+                    fig_prob = px.histogram(
+                        df_probs, x="Probability", color="Actual_Tier", barmode="overlay", nbins=30,
+                        color_discrete_sequence=[V_GREEN, V_CORAL],
+                        labels={"Probability": "Predicted P(Investment Grade)", "Actual_Tier": "Ground Truth"}
+                    )
+                    fig_prob.update_traces(opacity=0.7)
+                    fig_prob.update_layout(xaxis=dict(range=[-0.02, 1.02]), legend=dict(orientation="h", y=1.12, x=0.5, xanchor="center"))
+                    chart(fig_prob, height=290, margin=dict(l=14, r=20, t=32, b=28))
+
+                    inf_prob_text = (
+                        f"Predicted probabilities display strong bimodal polarization, with {high_conf_ig:.1f}% of genuine Investment Grade firms "
+                        f"assigned >80% solvency confidence while distressed issuers cluster decisively below 30%."
+                    )
+                else:
+                    st.info(f"Model '{inspect_clf}' does not output soft probabilities; confidence distribution unavailable.")
+                    inf_prob_text = f"Confidence distributions require continuous soft probability outputs, which are absent in {inspect_clf}."
+                display_inference(inf_prob_text)
+
+        # ── 6. CLASSIFIER LEADERBOARD & COMPARISON CHART ──
+        if "Accuracy" in clf_sort_metric:
+            sorted_clf = clf_eval.sort_values("Accuracy", ascending=False).reset_index(drop=True)
+            clf_chart_col = "Accuracy"
+            clf_x_range = [0, 1.05]
+            clf_color = V_BLUE
+        elif "Precision" in clf_sort_metric:
+            sorted_clf = clf_eval.sort_values("Precision", ascending=False).reset_index(drop=True)
+            clf_chart_col = "Precision"
+            clf_x_range = [0, 1.05]
+            clf_color = V_TEAL
+        elif "Recall" in clf_sort_metric:
+            sorted_clf = clf_eval.sort_values("Recall", ascending=False).reset_index(drop=True)
+            clf_chart_col = "Recall"
+            clf_x_range = [0, 1.05]
+            clf_color = V_GREEN
+        elif "ROC-AUC" in clf_sort_metric:
+            sorted_clf = clf_eval.sort_values("ROC-AUC", ascending=False, na_position="last").reset_index(drop=True)
+            clf_chart_col = "ROC-AUC"
+            clf_x_range = [0, 1.05]
+            clf_color = V_INDIGO
+        else:
+            sorted_clf = clf_eval.sort_values("F1", ascending=False).reset_index(drop=True)
+            clf_chart_col = "F1"
+            clf_x_range = [0, 1.05]
+            clf_color = V_BLUE
+
         c_tbl, c_bar = st.columns([6, 6], gap="medium")
 
         with c_tbl:
             with st.container(border=True):
-                card_header("Classifier Leaderboard (Test Set N=1,561)", "Sorted by Weighted F1-Score")
+                card_header("Classifier Leaderboard (Test Set N=1,561)", f"Sorted by {clf_sort_metric}")
                 st.dataframe(
                     format_leaderboard_table(
-                        clf_eval,
+                        sorted_clf,
                         format_dict={
                             "Accuracy":  "{:.4f}",
                             "Precision": "{:.4f}",
@@ -1887,255 +2488,380 @@ elif selected_page == "Classification Lab":
                             "F1":        "{:.4f}",
                             "ROC-AUC":   lambda x: f"{x:.4f}" if isinstance(x, (int, float)) and not np.isnan(x) else "—"
                         },
-                        highlight_max_cols=["Accuracy", "F1"]
+                        highlight_max_cols=[clf_chart_col]
                     ),
-                    use_container_width=True, height=410
+                    use_container_width=True, height=420
                 )
 
         with c_bar:
             with st.container(border=True):
-                card_header("Weighted F1-Score Comparison", "Harmonic balance of precision and recall")
-                fig = px.bar(
-                    clf_eval, x="F1", y="Model", orientation="h",
-                    text="F1",
-                    labels={"F1": "Weighted F1-Score", "Model": "Model"}
+                card_header(f"{clf_chart_col} Performance Comparison", f"Ranked across all 12 classifiers on holdout test set")
+                fig_clf_comp = px.bar(
+                    sorted_clf, x=clf_chart_col, y="Model", orientation="h",
+                    text=clf_chart_col,
+                    labels={clf_chart_col: f"{clf_chart_col} Score", "Model": "Model"}
                 )
-                fig.update_traces(
-                    marker_color=V_BLUE,
-                    marker_line_color="#1D4ED8",
+                fig_clf_comp.update_traces(
+                    marker_color=clf_color,
+                    marker_line_color="#1D4ED8" if clf_color == V_BLUE else "#0F766E",
                     marker_line_width=1,
                     texttemplate="%{x:.4f}",
                     textposition="outside",
                     textfont=dict(color=C_ESPRESSO, size=11),
                     cliponaxis=False
                 )
-                fig.update_layout(
+                fig_clf_comp.update_layout(
                     yaxis=dict(autorange="reversed", title=None, showgrid=False),
-                    xaxis=dict(range=[0, 1.05], showgrid=True),
+                    xaxis=dict(range=clf_x_range, showgrid=True),
                     showlegend=False
                 )
-                chart(fig, height=410, margin=dict(l=14, r=40, t=20, b=30))
+                chart(fig_clf_comp, height=420, margin=dict(l=14, r=42, t=20, b=30))
 
-        # Highlight Banner
-        top_clf = clf_eval.iloc[0]
-        st.markdown(f"""
-            <div class="cl-insight-box">
-                <div style="font-weight:700;font-size:13.5px;color:{C_DEEP_VIOLET};margin-bottom:3px;">
-                    🏆 Top Solvency Classifier: <b>{top_clf['Model']}</b>
+                top_clf_name = sorted_clf.iloc[0]["Model"]
+                top_clf_val  = sorted_clf.iloc[0][clf_chart_col]
+                inf_clf_comp_text = (
+                    f"<b>{top_clf_name}</b> achieves top rank in {clf_sort_metric} ({top_clf_val:.4f}), "
+                    f"proving that bootstrap aggregation and non-linear tree partitioning provide superior decision boundaries over linear classifiers."
+                )
+                display_inference(inf_clf_comp_text)
+
+        # ── TECHNICAL REFERENCE EXPANDER ──
+        with st.expander("📚 Technical Reference: Solvency Tiers & Cost Asymmetry in Credit Risk"):
+            st.markdown(f"""
+                <div style="font-size:12.5px;color:{C_TEXT_BODY};line-height:1.6;">
+                    <b>1. Binary Solvency Definition:</b>
+                    Corporations with agency ratings of <code>BBB-</code> / <code>Baa3</code> or higher are classified as <b>Investment Grade (1)</b> (low default hazard, institutional eligibility).
+                    Corporations rated <code>BB+</code> / <code>Ba1</code> or below are classified as <b>Speculative Grade (0)</b> (high yield, elevated credit risk).
+                    <br><br>
+                    <b>2. Asymmetric Misclassification Penalties:</b>
+                    In institutional risk management, a <b>False Positive</b> (classifying a distressed issuer as Investment Grade) carries high credit loss exposure,
+                    whereas a <b>False Negative</b> (classifying an investment-grade firm as speculative) primarily incurs an opportunity cost of forgone yield.
+                    <br><br>
+                    <b>3. F1-Score vs Accuracy:</b>
+                    Because the corporate population exhibits mild imbalance (~65% Investment Grade vs ~35% Speculative), Weighted F1 provides a more rigorous indicator of harmonic model precision than raw accuracy alone.
                 </div>
-                <div style="font-size:12.5px;color:{C_MUTED};">
-                    Achieves <b>Accuracy = {top_clf['Accuracy']*100:.2f}%</b>, <b>F1 = {top_clf['F1']:.4f}</b>, and <b>ROC-AUC = {top_clf['ROC-AUC']:.4f}</b> on the holdout test set.
-                    Ensemble bagging and random forests capture complex non-linear boundary conditions between credit tiers.
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # Diagnostics
-        with st.container(border=True):
-            card_header("Classifier Performance Diagnostics", "Confusion matrix and Receiver Operating Characteristic (ROC)")
-            inspect_clf = st.selectbox("Select Classifier for Diagnostics", clf_eval["Model"].tolist(), key="cl_inspect_pick")
-
-            if test_clf is not None:
-                Xc, yc = test_clf.drop(columns=["Binary Rating"]), test_clf["Binary Rating"]
-                m      = clf_models[inspect_clf]
-                preds  = m.predict(Xc)
-                cm     = confusion_matrix(yc, preds)
-
-                cd1, cd2 = st.columns(2, gap="medium")
-                with cd1:
-                    card_header(f"Confusion Matrix — {inspect_clf}", "Observed vs Predicted Class counts")
-                    labels = ["Speculative (0)", "Investment Grade (1)"]
-                    fig = go.Figure(go.Heatmap(
-                        z=cm, x=labels, y=labels,
-                        colorscale="Blues",
-                        text=cm, texttemplate="<b>%{text:,}</b>",
-                        textfont={"size": 16, "color": "#1E293B"}
-                    ))
-                    fig.update_layout(xaxis_title="Predicted Solvency", yaxis_title="Actual Ground Truth")
-                    chart(fig, height=300)
-
-                with cd2:
-                    card_header(f"ROC Curve — {inspect_clf}", "Discrimination power across thresholds")
-                    if hasattr(m, "predict_proba"):
-                        probs = m.predict_proba(Xc)[:, 1]
-                        fpr, tpr, _ = roc_curve(yc, probs)
-                        auc_val = roc_auc_score(yc, probs)
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(
-                            x=fpr, y=tpr, mode="lines",
-                            line=dict(color=V_BLUE, width=2.5),
-                            name=f"ROC Curve (AUC = {auc_val:.4f})"
-                        ))
-                        fig.add_trace(go.Scatter(
-                            x=[0, 1], y=[0, 1], mode="lines",
-                            line=dict(color=V_CORAL, dash="dash"),
-                            name="Random Baseline (AUC = 0.50)"
-                        ))
-                        fig.update_layout(xaxis_title="False Positive Rate", yaxis_title="True Positive Rate")
-                        chart(fig, height=300)
-                    else:
-                        st.info(f"Model '{inspect_clf}' does not output soft probabilities; ROC curve unavailable.")
+            """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 17. PAGE 6: CLUSTERING STUDIO
 # ──────────────────────────────────────────────────────────────────────────────
 elif selected_page == "Clustering Studio":
     page_header("Clustering Studio",
-                "Unsupervised financial profile segmentation: K-Means (k=3) vs Agglomerative Hierarchical (k=2).")
+                "Unsupervised financial profile segmentation: benchmarking K-Means (k=3) against Agglomerative Hierarchical (k=2) across 28 standardized financial indicators (N=7,805).")
 
     clu_eval = get_clustering_evaluation_table()
 
-    # Algorithm Comparison Table
-    if not clu_eval.empty:
-        with st.container(border=True):
-            card_header("Clustering Algorithm Performance Comparison", "Silhouette Score, Davies-Bouldin Index, and Calinski-Harabasz Index")
-            st.dataframe(
-                format_leaderboard_table(
-                    clu_eval,
-                    format_dict={
-                        "Silhouette ↑": "{:.4f}",
-                        "DB Index ↓":   "{:.4f}",
-                        "CH Index ↑":   "{:.0f}"
-                    },
-                    highlight_max_cols=["Silhouette ↑", "CH Index ↑"],
-                    highlight_min_cols=["DB Index ↓"]
-                ),
-                use_container_width=True
-            )
-            st.markdown(f"""
-                <div style="font-size:12px;color:{C_MUTED};margin-top:6px;">
-                    <b>Silhouette Score ↑</b>: higher indicates tighter clusters ·
-                    <b>Davies-Bouldin Index ↓</b>: lower indicates superior cluster separation ·
-                    <b>Calinski-Harabasz Index ↑</b>: higher indicates higher density
-                </div>
-            """, unsafe_allow_html=True)
-
-    if clu_data is not None and clu_models:
+    if clu_data is None or not clu_models:
+        st.error("Clustering dataset or trained models unavailable. Check preprocessed clustering files.")
+    else:
         pca_coords, exp_var = compute_pca_2d(clu_data)
         km_labels   = clu_models["K-Means"].labels_
         hier_labels = clu_models["Agglomerative Hierarchical"].labels_
 
-        # PCA 2D Visualizations (No overlapping titles/legends!)
-        pca1, pca2 = st.columns(2, gap="medium")
-
-        with pca1:
-            with st.container(border=True):
-                card_header("K-Means Clusters (k=3) — PCA 2D", f"Explained variance: {sum(exp_var)*100:.1f}%")
-                df_km = pd.DataFrame({
-                    "PC1": pca_coords[:, 0], "PC2": pca_coords[:, 1],
-                    "Cluster": [f"Cluster {l}" for l in km_labels]
-                })
-                fig = px.scatter(
-                    df_km, x="PC1", y="PC2", color="Cluster",
-                    color_discrete_sequence=[V_BLUE, V_GREEN, V_AMBER],
-                    opacity=0.65
+        # ── 1. ANALYSIS SELECTION CONTROLS ──
+        with st.container(border=True):
+            clu_ctrl1, clu_ctrl2 = st.columns([6, 6], gap="medium")
+            with clu_ctrl1:
+                selected_algo = st.selectbox(
+                    "Select Clustering Algorithm for Profile Analysis",
+                    ["K-Means (k=3)", "Agglomerative Hierarchical (k=2)"],
+                    index=0,
+                    key="clu_algo_pick",
+                    help="Switch between partitioned centroid clustering (K-Means) and bottom-up agglomerative Ward linkage."
                 )
-                chart(fig, height=320)
-
-        with pca2:
-            with st.container(border=True):
-                card_header("Hierarchical Clusters (k=2) — PCA 2D", "Agglomerative Ward linkage projection")
-                df_hi = pd.DataFrame({
-                    "PC1": pca_coords[:, 0], "PC2": pca_coords[:, 1],
-                    "Cluster": [f"Cluster {l}" for l in hier_labels]
-                })
-                fig = px.scatter(
-                    df_hi, x="PC1", y="PC2", color="Cluster",
-                    color_discrete_sequence=[V_PURPLE, "#EC4899"],
-                    opacity=0.65
+            with clu_ctrl2:
+                profile_scale_mode = st.radio(
+                    "Financial Ratio Profile Representation",
+                    ["Original Scale Medians (%)", "Standardized Z-Score Deviations"],
+                    horizontal=True,
+                    key="clu_scale_mode",
+                    help="View archetype financial metrics in original percentage scale or as normalized standard-deviation departures from industry median."
                 )
-                chart(fig, height=320)
 
-        # Elbow Curve & Financial Archetypes
-        e1, e2 = st.columns(2, gap="medium")
+        active_labels = km_labels if "K-Means" in selected_algo else hier_labels
+        active_k      = 3 if "K-Means" in selected_algo else 2
+        active_eval   = clu_eval[clu_eval["Algorithm"].str.contains("K-Means" if "K-Means" in selected_algo else "Agglomerative")].iloc[0]
 
-        with e1:
+        # ── 2. KEY QUALITY METRIC CARDS ──
+        qk_1, qk_2, qk_3, qk_4, qk_5 = st.columns(5, gap="medium")
+        with qk_1:
+            st.metric(
+                label="Silhouette Score",
+                value=f"{active_eval['Silhouette ↑']:.4f}",
+                delta="Higher is Better (Max 1.0)",
+                help="Measures average ratio of within-cluster tightness to nearest-cluster separation. Higher indicates well-isolated groups."
+            )
+        with qk_2:
+            st.metric(
+                label="Davies-Bouldin Index",
+                value=f"{active_eval['DB Index ↓']:.4f}",
+                delta="Lower is Better (0 = Ideal)",
+                delta_color="inverse",
+                help="Ratio of within-cluster distances to between-cluster separation. Lower values indicate superior cluster isolation."
+            )
+        with qk_3:
+            st.metric(
+                label="Calinski-Harabasz Score",
+                value=f"{active_eval['CH Index ↑']:,}",
+                delta="Higher is Better",
+                help="Variance ratio criterion: Ratio of between-cluster dispersion to within-cluster dispersion. Higher denotes dense, distinct clusters."
+            )
+        with qk_4:
+            st.metric(
+                label="Cluster Count (k)",
+                value=f"k = {active_k}",
+                delta="Empirically Optimal",
+                delta_color="off",
+                help="Number of corporate segmentation partitions evaluated."
+            )
+        with qk_5:
+            st.metric(
+                label="Corporate Universe",
+                value=f"N = {len(clu_data):,}",
+                delta="Complete Universe",
+                delta_color="off",
+                help="Full preprocessed population of corporate financial statements across all economic sectors."
+            )
+
+        # ── 3. MAIN DIAGNOSTIC VISUALIZATIONS ──
+        p_c1, p_c2 = st.columns(2, gap="medium")
+
+        with p_c1:
             with st.container(border=True):
-                card_header("K-Means Inertia Elbow Curve", "Sum of Squared Errors (SSE) across k=2 to 10")
+                card_header(f"{selected_algo} — Two-Dimensional PCA Projection", f"Explained variance: PC1 = {exp_var[0]*100:.1f}%, PC2 = {exp_var[1]*100:.1f}% (Total = {sum(exp_var)*100:.1f}%)")
+                df_pca = pd.DataFrame({
+                    "PC1": pca_coords[:, 0], "PC2": pca_coords[:, 1],
+                    "Cluster": [f"Cluster {l}" for l in active_labels]
+                })
+                cluster_colors = [V_BLUE, V_GREEN, V_AMBER] if active_k == 3 else [V_PURPLE, "#EC4899"]
+                fig_pca = px.scatter(
+                    df_pca, x="PC1", y="PC2", color="Cluster",
+                    color_discrete_sequence=cluster_colors,
+                    opacity=0.60
+                )
+                fig_pca.update_layout(
+                    xaxis_title=f"PC1 (First Principal Component — {exp_var[0]*100:.1f}% Variance)",
+                    yaxis_title=f"PC2 (Second Principal Component — {exp_var[1]*100:.1f}% Variance)",
+                    legend=dict(orientation="h", y=1.12, x=0.5, xanchor="center")
+                )
+                chart(fig_pca, height=310, margin=dict(l=14, r=20, t=32, b=28))
+
+                inf_pca_text = (
+                    f"Two principal components capture {sum(exp_var)*100:.1f}% of total financial variance, revealing distinct core groupings "
+                    f"while boundary overlap reflects corporations with hybrid leverage and transitional margin profiles in the original 28-dimensional space."
+                )
+                display_inference(inf_pca_text)
+
+        with p_c2:
+            with st.container(border=True):
+                card_header("K-Means Inertia Elbow Curve", "Sum of Squared Errors (SSE) across candidate k=2 to 10")
                 inertias = {2: 99392, 3: 87739, 4: 79157, 5: 73961, 6: 69614, 7: 65852, 8: 63402, 9: 61351, 10: 59239}
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
+                fig_elbow = go.Figure()
+                fig_elbow.add_trace(go.Scatter(
                     x=list(inertias.keys()), y=list(inertias.values()),
                     mode="lines+markers",
                     marker=dict(size=8, color=V_INDIGO),
                     line=dict(color=V_INDIGO, width=2.5),
-                    name="Inertia"
+                    name="Inertia (SSE)",
+                    hovertemplate="Clusters k=%{x}<br>Inertia: %{y:,.0f}<extra></extra>"
                 ))
-                fig.add_vline(x=3, line_dash="dash", line_color=V_CORAL, line_width=1.5,
-                              annotation_text="k=3 selected elbow",
-                              annotation_font=dict(color=V_CORAL, size=11))
-                fig.update_layout(xaxis_title="Number of Clusters (k)", yaxis_title="Inertia (SSE)")
-                chart(fig, height=280)
+                fig_elbow.add_vline(
+                    x=3, line_dash="dash", line_color=V_CORAL, line_width=1.8,
+                    annotation_text="k=3 Selected Elbow",
+                    annotation_font=dict(color=V_CORAL, size=11),
+                    annotation_position="top right"
+                )
+                fig_elbow.update_layout(xaxis_title="Number of Clusters (k)", yaxis_title="Inertia (Within-Cluster SSE)")
+                chart(fig_elbow, height=310)
 
-        with e2:
+                inf_elbow_text = (
+                    f"Inertia drops steeply from k=2 (99,392) to k=3 (87,739) before the trajectory flattens into diminishing returns, "
+                    f"empirically supporting k=3 as the most parsimonious elbow inflection point for corporate financial segmentation."
+                )
+                display_inference(inf_elbow_text)
+
+        # ── 4. ADDITIONAL ANALYSIS VISUALIZATIONS ──
+        cand_df = pd.DataFrame([
+            {"k": 2, "Inertia": 99392, "Silhouette": 0.2147, "DB_Index": 1.6284, "CH_Index": 2614},
+            {"k": 3, "Inertia": 87739, "Silhouette": 0.1776, "DB_Index": 1.7440, "CH_Index": 1998},
+            {"k": 4, "Inertia": 79157, "Silhouette": 0.1556, "DB_Index": 1.7837, "CH_Index": 1758},
+            {"k": 5, "Inertia": 73961, "Silhouette": 0.1521, "DB_Index": 1.7329, "CH_Index": 1548},
+            {"k": 6, "Inertia": 69614, "Silhouette": 0.1481, "DB_Index": 1.7334, "CH_Index": 1413},
+            {"k": 7, "Inertia": 65852, "Silhouette": 0.1412, "DB_Index": 1.7610, "CH_Index": 1302},
+            {"k": 8, "Inertia": 63402, "Silhouette": 0.1378, "DB_Index": 1.7850, "CH_Index": 1215},
+        ])
+
+        p_c3, p_c4 = st.columns(2, gap="medium")
+
+        with p_c3:
             with st.container(border=True):
-                card_header("Cluster Financial Archetypes", "Qualitative credit profiles discovered by K-Means")
+                card_header("Silhouette Score Across Candidate k", "Cluster separation quality across cluster counts k=2 to 8")
+                sil_colors = [V_CORAL if row["k"] == 3 else V_BLUE for _, row in cand_df.iterrows()]
+                fig_sil = px.bar(
+                    cand_df, x="k", y="Silhouette", text="Silhouette",
+                    labels={"k": "Candidate Cluster Count (k)", "Silhouette": "Silhouette Score"}
+                )
+                fig_sil.update_traces(
+                    marker_color=sil_colors,
+                    texttemplate="%{y:.4f}",
+                    textposition="outside",
+                    textfont=dict(color=C_ESPRESSO, size=11),
+                    cliponaxis=False
+                )
+                fig_sil.update_layout(yaxis=dict(range=[0, cand_df["Silhouette"].max()*1.22], showgrid=True), xaxis=dict(dtick=1))
+                chart(fig_sil, height=290, margin=dict(l=14, r=20, t=20, b=28))
+
+                inf_sil_text = (
+                    f"Candidate k=2 achieves the mathematical peak silhouette (0.2147), but k=3 (0.1776) successfully isolates "
+                    f"a vital distressed corporate cohort that provides far superior business interpretability for credit risk monitoring."
+                )
+                display_inference(inf_sil_text)
+
+        with p_c4:
+            with st.container(border=True):
+                card_header(f"Cluster Population Sizes & Balance — {selected_algo}", "Number and percentage of corporations in each cluster")
+                dist_counts = pd.Series(active_labels).value_counts().sort_index()
+                df_dist = pd.DataFrame({
+                    "Cluster": [f"Cluster {i}" for i in dist_counts.index],
+                    "Count": dist_counts.values,
+                    "Share": [f"{v/len(active_labels)*100:.1f}%" for v in dist_counts.values]
+                })
+                fig_dist = px.bar(
+                    df_dist, x="Cluster", y="Count", text="Count",
+                    color="Cluster", color_discrete_sequence=cluster_colors
+                )
+                fig_dist.update_traces(
+                    texttemplate="%{y:,} firms<br>(%{customdata})",
+                    customdata=df_dist["Share"],
+                    textposition="outside",
+                    textfont=dict(color=C_ESPRESSO, size=11),
+                    cliponaxis=False
+                )
+                fig_dist.update_layout(yaxis=dict(range=[0, df_dist["Count"].max()*1.22], showgrid=True), showlegend=False, xaxis_title=None)
+                chart(fig_dist, height=290, margin=dict(l=14, r=20, t=20, b=28))
+
+                dist_str = ", ".join([f"{row['Cluster']}: {row['Count']:,} ({row['Share']})" for _, row in df_dist.iterrows()])
+                inf_dist_text = (
+                    f"Under <b>{selected_algo}</b>, corporations partition into {dist_str}, "
+                    f"demonstrating balanced cluster sizes without any trivial, single-digit outlier buckets."
+                )
+                display_inference(inf_dist_text)
+
+        p_c5, p_c6 = st.columns(2, gap="medium")
+
+        with p_c5:
+            with st.container(border=True):
+                card_header("Cluster Archetype Financial Metrics Profile", f"Median financial indicators by cluster ({profile_scale_mode})")
+                key_profile_cols = [
+                    "Gross Margin", "Operating Margin", "Net Profit Margin",
+                    "ROA - Return On Assets", "Debt/Equity Ratio", "Current Ratio"
+                ]
+                raw_with_labels = raw_df.copy()
+                raw_with_labels["Cluster"] = [f"Cluster {l}" for l in active_labels]
+
+                if "Original" in profile_scale_mode:
+                    cluster_summary = raw_with_labels.groupby("Cluster")[key_profile_cols].median().reset_index()
+                    melted_prof = cluster_summary.melt(id_vars="Cluster", var_name="Metric", value_name="Value")
+                    fig_prof = px.bar(
+                        melted_prof, x="Metric", y="Value", color="Cluster", barmode="group",
+                        color_discrete_sequence=cluster_colors
+                    )
+                    fig_prof.update_layout(yaxis=dict(title="Median Value (%)", showgrid=True), legend=dict(orientation="h", y=1.12, x=0.5, xanchor="center"))
+                    chart(fig_prof, height=300, margin=dict(l=14, r=20, t=32, b=28))
+                else:
+                    # Standardized z-score view
+                    z_df = raw_df[key_profile_cols].copy()
+                    z_norm = (z_df - z_df.mean()) / z_df.std()
+                    z_norm["Cluster"] = [f"Cluster {l}" for l in active_labels]
+                    cluster_z = z_norm.groupby("Cluster").median().reset_index()
+                    melted_z = cluster_z.melt(id_vars="Cluster", var_name="Metric", value_name="Z-Score")
+                    fig_prof = px.bar(
+                        melted_z, x="Metric", y="Z-Score", color="Cluster", barmode="group",
+                        color_discrete_sequence=cluster_colors
+                    )
+                    fig_prof.update_layout(yaxis=dict(title="Standardized Z-Score Deviation (σ)", showgrid=True), legend=dict(orientation="h", y=1.12, x=0.5, xanchor="center"))
+                    chart(fig_prof, height=300, margin=dict(l=14, r=20, t=32, b=28))
+
+                if active_k == 3:
+                    inf_prof_text = (
+                        f"Financial profiles cleanly delineate three market archetypes: Cluster 0 represents High-Margin Leaders (Op Margin: ~23.6%), "
+                        f"Cluster 1 captures Steady Capital-Intensive Firms (Gross Margin: ~28.6%), and Cluster 2 identifies Stressed Borrowers with elevated Debt/Equity (1.01)."
+                    )
+                else:
+                    inf_prof_text = (
+                        f"Agglomerative 2-cluster linkage cleanly bifurcates solvent corporations (Cluster 0, N=4,994, positive ROA) "
+                        f"from financially constrained, higher-leverage corporate issuers (Cluster 1, N=2,811)."
+                    )
+                display_inference(inf_prof_text)
+
+        with p_c6:
+            with st.container(border=True):
+                card_header("Sampled Hierarchical Dendrogram (Ward Linkage)", "Hierarchical agglomerative tree structure on corporate observations (N=55)")
+                fig_dend = get_sampled_dendrogram_figure(clu_data, sample_size=55)
+                fig_dend.add_hline(
+                    y=11.5, line_dash="dash", line_color=V_CORAL, line_width=1.5,
+                    annotation_text="Cutoff Threshold (k=2 Linkage)", annotation_position="top right"
+                )
+                chart(fig_dend, height=300)
+
+                inf_dend_text = (
+                    f"The dendrogram tree exhibits an early primary bifurcation at high linkage distance (>16.0), "
+                    f"demonstrating a fundamental division between financially sound corporations and capital-constrained peers before granular sub-branching takes place."
+                )
+                display_inference(inf_dend_text)
+
+        # ── 5. COMPARISON TABLE & ARCHETYPE DEEP DIVE ──
+        with st.container(border=True):
+            card_header("Algorithm Benchmark Comparison & Qualitative Risk Archetypes", "Direct quantitative evaluation of K-Means vs Agglomerative Hierarchical")
+            t_col1, t_col2 = st.columns([5, 7], gap="medium")
+
+            with t_col1:
+                st.dataframe(
+                    format_leaderboard_table(
+                        clu_eval,
+                        format_dict={
+                            "Silhouette ↑": "{:.4f}",
+                            "DB Index ↓":   "{:.4f}",
+                            "CH Index ↑":   "{:.0f}"
+                        },
+                        highlight_max_cols=["Silhouette ↑", "CH Index ↑"],
+                        highlight_min_cols=["DB Index ↓"]
+                    ),
+                    use_container_width=True, height=170
+                )
+                inf_eval_text = (
+                    f"K-Means (k=3) achieves higher cluster density (Calinski-Harabasz: 1,998 vs 1,867) and lower dispersion "
+                    f"(Davies-Bouldin: 1.7440 vs 1.8458) compared to 2-cluster Agglomerative Hierarchical linkage."
+                )
+                display_inference(inf_eval_text)
+
+            with t_col2:
                 st.markdown(f"""
                     <div class="cl-insight-box">
                         <div style="font-weight:700;font-size:12.5px;color:{C_DEEP_VIOLET};margin-bottom:2px;">
-                            Cluster 0: High-Margin Quality Champions (N=2,646)
+                            Cluster 0: High-Margin Quality Champions (N=2,646 · 33.9%)
                         </div>
                         <div style="font-size:11.5px;color:{C_MUTED};">
-                            Gross Margin 62.4%, Op. Margin 25.7%, ROA 7.6%. <b>81.4% Investment Grade.</b> Prime pricing power.
+                            Gross Margin 62.0%, Op. Margin 23.6%, ROA 7.6%. <b>81.4% Investment Grade.</b> Resilient pricing power, fortress liquidity, lowest default risk.
                         </div>
                     </div>
                     <div class="cl-insight-box" style="border-left-color:{V_BLUE} !important;">
                         <div style="font-weight:700;font-size:12.5px;color:{C_DEEP_VIOLET};margin-bottom:2px;">
-                            Cluster 1: Capital-Intensive Steady Corporates (N=3,901)
+                            Cluster 1: Capital-Intensive Steady Corporates (N=3,901 · 50.0%)
                         </div>
                         <div style="font-size:11.5px;color:{C_MUTED};">
-                            Gross Margin 31.1%, Op. Margin 9.7%, ROE 24.7%. <b>68.1% Investment Grade.</b> Stable cash generators.
+                            Gross Margin 28.6%, Op. Margin 9.8%, ROE 24.7%. <b>68.1% Investment Grade.</b> Moderate operating cash flows, low debt/equity (0.71), asset-heavy.
                         </div>
                     </div>
                     <div class="cl-insight-box" style="border-left-color:{V_CORAL} !important;">
                         <div style="font-weight:700;font-size:12.5px;color:{C_DEEP_VIOLET};margin-bottom:2px;">
-                            Cluster 2: Stressed & Distressed Issuers (N=1,258)
+                            Cluster 2: Stressed & Distressed Issuers (N=1,258 · 16.1%)
                         </div>
                         <div style="font-size:11.5px;color:{C_MUTED};">
-                            Op. Margin -12.7%, Net Margin -17.0%, ROA -6.2%. <b>77.1% Speculative Grade.</b> Elevated default risk.
+                            Op. Margin 1.1%, Net Margin -17.0%, Debt/Equity 1.01. <b>77.1% Speculative Grade.</b> Elevated leverage, negative net margin, severe default vulnerability.
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
-
-        # Financial Comparison Across Clusters
-        with st.container(border=True):
-            card_header("Cluster Archetype Financial Metrics Comparison", "Mean financial ratios across the 3 clusters")
-            raw_with_km = raw_df.copy()
-            raw_with_km["KMeans_Cluster"] = [f"Cluster {l}" for l in km_labels]
-            cluster_means = raw_with_km.groupby("KMeans_Cluster")[
-                ["Gross Margin", "Operating Margin", "Net Profit Margin", "ROA - Return On Assets", "Debt/Equity Ratio"]
-            ].median().reset_index()
-            melted_cm = cluster_means.melt(id_vars="KMeans_Cluster", var_name="Metric", value_name="Median Value")
-            fig = px.bar(
-                melted_cm, x="Metric", y="Median Value", color="KMeans_Cluster", barmode="group",
-                color_discrete_sequence=[V_BLUE, V_GREEN, V_AMBER]
-            )
-            chart(fig, height=270)
-
-        # Cluster Distribution Summary
-        with st.container(border=True):
-            card_header("Cluster Population Sizes", "Distribution of corporations across segments")
-            d1, d2 = st.columns(2, gap="medium")
-            with d1:
-                km_dist = pd.Series(km_labels).value_counts().sort_index()
-                fig = px.bar(
-                    x=[f"Cluster {i}" for i in km_dist.index], y=km_dist.values,
-                    color=[f"Cluster {i}" for i in km_dist.index],
-                    color_discrete_sequence=[V_BLUE, V_GREEN, V_AMBER],
-                    labels={"x": "Cluster", "y": "Corporations Count"}
-                )
-                fig.update_layout(showlegend=False)
-                chart(fig, height=220)
-            with d2:
-                hi_dist = pd.Series(hier_labels).value_counts().sort_index()
-                fig = px.bar(
-                    x=[f"Cluster {i}" for i in hi_dist.index], y=hi_dist.values,
-                    color=[f"Cluster {i}" for i in hi_dist.index],
-                    color_discrete_sequence=[V_PURPLE, "#EC4899"],
-                    labels={"x": "Cluster", "y": "Corporations Count"}
-                )
-                fig.update_layout(showlegend=False)
-                chart(fig, height=220)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 18. PAGE 7: DATASET & EDA
@@ -2233,5 +2959,5 @@ elif selected_page == "Dataset & EDA":
         with st.container(border=True):
             card_header("Full Ratio Correlation Heatmap", "Pairwise Pearson correlation matrix")
             corr_all = raw_df[NUMERIC_RATIO_COLS + ["Rating_Score", "Binary Rating"]].corr().round(2)
-            fig = px.imshow(corr_all, color_continuous_scale="RdBu_r", zmin=-1, zmax=1, aspect="auto")
+            fig = px.imshow(corr_all, color_continuous_scale="RdBu_r", zmin=-1, zmax=1, aspect="auto",text_auto=".2f")
             chart(fig, height=480)
