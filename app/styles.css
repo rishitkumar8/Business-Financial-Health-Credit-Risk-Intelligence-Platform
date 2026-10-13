@@ -1,0 +1,506 @@
+/* ==============================================================================
+   CreditLens — Corporate Credit Risk Intelligence Platform
+   Design System: Warm Ivory & Mocha Visual Identity (Light-Dominant Fintech)
+   ============================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+    /* ── Warm Ivory & Mocha Palette ── */
+    --bg-main:              #F4EFE6; /* Warm ivory main page background */
+    --surface-card:         #FAF6EF; /* Soft cream main content card */
+    --surface-secondary:    #E8DCCB; /* Soft sand secondary panel */
+    --highlight-subtle:     #EFE5D7; /* Pale beige subtle highlight */
+    --border-subtle:        #D2BDA5; /* Muted taupe borders and dividers */
+    --border-light:         #E3D7C7; /* Soft light border */
+
+    /* ── Accents ── */
+    --accent-mocha:         #927B68; /* Mocha secondary accent */
+    --accent-deep-mocha:    #705B49; /* Deep mocha strong accent */
+
+    /* ── Typography & Neutrals ── */
+    --headings-text:        #514438; /* Espresso brown headings and strong text */
+    --body-text:            #625448; /* Warm charcoal-brown body text */
+    --text-muted:           #827567; /* Taupe gray muted text */
+
+    /* ── Dark Feature Card ── */
+    --card-espresso:        #514438; /* Espresso dark feature card */
+    --text-on-espresso:     #F4EFE6; /* Warm cream text on dark feature card */
+
+    /* ── Indicators ── */
+    --indicator-positive:   #2E7D32; /* Forest green */
+    --indicator-warning:    #D97706; /* Amber */
+    --indicator-negative:   #C62828; /* Crimson red */
+
+    /* ── Shadows & Radii ── */
+    --shadow-sm:            0 1px 4px rgba(81, 68, 56, 0.08);
+    --shadow-md:            0 4px 14px rgba(81, 68, 56, 0.12);
+    --shadow-lg:            0 8px 24px rgba(81, 68, 56, 0.16);
+    --radius-sm:            6px;
+    --radius-md:            10px;
+    --radius-lg:            14px;
+    --radius-xl:            18px;
+
+    /* ── Transitions ── */
+    --transition-fast:      0.15s ease;
+    --transition-smooth:    0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Global App Shell ── */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body, [class*="css"] {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--body-text);
+    -webkit-font-smoothing: antialiased;
+}
+
+.stApp {
+    background-color: var(--bg-main) !important;
+    color: var(--body-text) !important;
+}
+
+/* Base text contrast enforcement */
+.stApp p, .stApp span, .stApp label, .stApp div:not([class*="cl-hero-result"]) {
+    color: inherit;
+}
+
+/* ── Content Viewport ── */
+section.main > div.block-container {
+    padding: 1.6rem 2.4rem 2.8rem 2.4rem;
+    max-width: 1440px;
+}
+
+/* ── Headings ── */
+h1, h2, h3 {
+    color: var(--headings-text) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.015em;
+    margin-top: 0;
+}
+h4, h5, h6 {
+    color: var(--accent-deep-mocha) !important;
+    font-weight: 600 !important;
+}
+
+/* ── Refined Light Sidebar ── */
+section[data-testid="stSidebar"] {
+    background-color: var(--surface-card) !important; /* Soft cream */
+    border-right: 1px solid var(--border-subtle) !important; /* Muted taupe */
+}
+section[data-testid="stSidebar"] .block-container {
+    padding-top: 1.3rem;
+    padding-left: 1.1rem;
+    padding-right: 1.1rem;
+}
+section[data-testid="stSidebar"] * {
+    color: var(--body-text);
+}
+
+/* Universal Navigation & Radio Button Styling */
+div[role="radiogroup"] label[data-testid="stRadioOption"] > div > div:first-child {
+    display: none !important;
+}
+
+div[role="radiogroup"] {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+div[role="radiogroup"] label[data-testid="stRadioOption"] {
+    display: flex !important;
+    align-items: center !important;
+    padding: 9px 14px !important;
+    border-radius: var(--radius-md) !important;
+    cursor: pointer !important;
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    color: var(--body-text) !important;
+    transition: all var(--transition-fast) !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    margin-bottom: 2px !important;
+}
+
+div[role="radiogroup"] label[data-testid="stRadioOption"]:hover {
+    background: var(--highlight-subtle) !important; /* Pale beige */
+    color: var(--headings-text) !important;
+}
+
+div[role="radiogroup"] label[data-testid="stRadioOption"][data-selected="true"] {
+    background: var(--surface-secondary) !important; /* Soft sand */
+    border-color: var(--border-subtle) !important;
+    border-left: 3.5px solid var(--accent-deep-mocha) !important; /* Deep mocha indicator */
+    color: var(--headings-text) !important;
+    box-shadow: 0 1px 3px rgba(81, 68, 56, 0.08) !important;
+}
+
+div[role="radiogroup"] label[data-testid="stRadioOption"][data-selected="true"] p {
+    color: var(--headings-text) !important;
+    font-weight: 700 !important;
+}
+
+/* Horizontal Radio Toggles (e.g. Input Mode) */
+div[role="radiogroup"][aria-orientation="horizontal"] {
+    flex-direction: row !important;
+    gap: 8px !important;
+}
+div[role="radiogroup"][aria-orientation="horizontal"] label[data-testid="stRadioOption"] {
+    background: var(--surface-card) !important;
+    border: 1px solid var(--border-subtle) !important;
+    color: var(--body-text) !important;
+}
+div[role="radiogroup"][aria-orientation="horizontal"] label[data-testid="stRadioOption"][data-selected="true"] {
+    background: var(--surface-secondary) !important;
+    border-color: var(--accent-deep-mocha) !important;
+    border-left: 1px solid var(--accent-deep-mocha) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   CRITICAL FIX: OPAQUE CONTAINER CARDS (Streamlit 1.30+ to 1.65+)
+   ────────────────────────────────────────────────────────────────────────────── */
+div[data-testid="stLayoutWrapper"] > div[data-testid="stVerticalBlock"],
+div[data-testid="stVerticalBlock"][data-test-scroll-behavior="normal"],
+div[data-testid="stVerticalBlockBorderWrapper"],
+.cl-card {
+    background-color: var(--surface-card) !important; /* Soft cream #FAF6EF */
+    border: 1px solid var(--border-subtle) !important; /* Muted taupe #D2BDA5 */
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-sm) !important;
+    padding: 18px 22px 22px 22px !important;
+    margin-bottom: 16px !important;
+    transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth);
+}
+
+div[data-testid="stLayoutWrapper"] > div[data-testid="stVerticalBlock"]:hover,
+div[data-testid="stVerticalBlock"][data-test-scroll-behavior="normal"]:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+.cl-card:hover {
+    box-shadow: var(--shadow-md) !important;
+    border-color: var(--accent-mocha) !important;
+}
+
+/* Secondary Panels */
+.cl-card-secondary {
+    background-color: var(--surface-secondary) !important; /* Soft sand #E8DCCB */
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 18px 22px !important;
+    margin-bottom: 16px !important;
+}
+
+/* ── KPI Metric Cards ── */
+div[data-testid="stMetric"] {
+    background-color: var(--surface-card) !important; /* Soft cream */
+    border: 1px solid var(--border-subtle) !important; /* Muted taupe */
+    border-radius: var(--radius-lg) !important;
+    padding: 14px 16px !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth) !important;
+}
+div[data-testid="stMetric"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md) !important;
+    border-color: var(--accent-deep-mocha) !important;
+}
+div[data-testid="stMetricLabel"],
+div[data-testid="stMetricLabel"] *,
+div[data-testid="stMetric"] label,
+div[data-testid="stMetric"] label * {
+    overflow: visible !important;
+    white-space: normal !important;
+    text-overflow: unset !important;
+    word-break: break-word !important;
+}
+div[data-testid="stMetricLabel"] p {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--text-muted) !important; /* Taupe gray */
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    margin-bottom: 3px !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    line-height: 1.25 !important;
+}
+div[data-testid="stMetricValue"] {
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    color: var(--headings-text) !important; /* Espresso brown */
+    line-height: 1.15 !important;
+    letter-spacing: -0.02em !important;
+}
+div[data-testid="stMetricDelta"] {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--indicator-positive) !important;
+    white-space: normal !important;
+}
+
+/* ── Tabs Navigation ── */
+div[data-testid="stTabs"] div[role="tablist"] {
+    border-bottom: 1.5px solid var(--border-subtle) !important;
+    gap: 8px !important;
+}
+button[data-baseweb="tab"] {
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    border-bottom: 2px solid transparent !important;
+    padding: 10px 18px !important;
+    transition: color var(--transition-fast) !important;
+}
+button[data-baseweb="tab"]:hover {
+    color: var(--headings-text) !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: var(--headings-text) !important;
+    border-bottom-color: var(--accent-deep-mocha) !important;
+    font-weight: 700 !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] p {
+    color: var(--headings-text) !important;
+    font-weight: 700 !important;
+}
+div[data-baseweb="tab-highlight"],
+div[data-testid="stTabs"] div[role="tablist"] div[style*="background"],
+div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] {
+    background-color: var(--accent-deep-mocha) !important;
+}
+div[data-baseweb="tab-border"] {
+    background-color: var(--border-subtle) !important;
+}
+
+/* ── Form Controls, Inputs & Selectboxes ── */
+div[data-baseweb="select"] > div {
+    background-color: #FFFFFF !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--headings-text) !important;
+    transition: border-color var(--transition-fast) !important;
+}
+div[data-baseweb="select"] > div:hover {
+    border-color: var(--accent-deep-mocha) !important;
+}
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] div {
+    color: var(--headings-text) !important;
+}
+div[data-baseweb="input"] > div {
+    background-color: #FFFFFF !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--headings-text) !important;
+}
+div[data-baseweb="input"] input {
+    color: var(--headings-text) !important;
+}
+div[data-baseweb="input"] input::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Dropdown popover listbox readability */
+div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
+    background-color: var(--surface-card) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+li[role="option"] {
+    background-color: var(--surface-card) !important;
+    color: var(--headings-text) !important;
+}
+li[role="option"]:hover, li[role="option"][aria-selected="true"] {
+    background-color: var(--highlight-subtle) !important;
+    color: var(--headings-text) !important;
+}
+
+/* ── Buttons ── */
+.stButton > button {
+    border-radius: var(--radius-md) !important;
+    font-weight: 600 !important;
+    font-size: 13.5px !important;
+    border: 1px solid var(--border-subtle) !important;
+    color: var(--headings-text) !important;
+    background: var(--surface-card) !important;
+    transition: all var(--transition-fast) !important;
+    padding: 8px 18px !important;
+}
+.stButton > button:hover {
+    border-color: var(--accent-deep-mocha) !important;
+    color: var(--headings-text) !important;
+    background: var(--highlight-subtle) !important;
+}
+.stButton > button[kind="primary"] {
+    background: var(--accent-deep-mocha) !important; /* Deep mocha #705B49 */
+    color: var(--text-on-espresso) !important; /* Warm cream */
+    border: 1px solid var(--headings-text) !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(81, 68, 56, 0.2) !important;
+}
+.stButton > button[kind="primary"]:hover {
+    background: var(--headings-text) !important; /* Espresso #514438 */
+    color: #FFFFFF !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 14px rgba(81, 68, 56, 0.28) !important;
+}
+.stButton > button[kind="primary"] * {
+    color: var(--text-on-espresso) !important;
+}
+
+/* ── Expanders ── */
+div[data-testid="stExpander"] {
+    background: var(--surface-card) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin-bottom: 16px !important;
+}
+div[data-testid="stExpander"] summary {
+    font-weight: 600 !important;
+    color: var(--headings-text) !important;
+}
+
+/* ── Custom Component Elements ── */
+.cl-header {
+    padding: 0 0 16px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 22px;
+}
+.cl-title {
+    font-size: 23px;
+    font-weight: 800;
+    color: var(--headings-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.015em;
+}
+.cl-desc {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.45;
+}
+
+.cl-card-header {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-light);
+}
+.cl-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--headings-text);
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+}
+.cl-card-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* ── Secondary Panel / Soft Sand Insight Boxes ── */
+.cl-insight-box {
+    border-left: 4px solid var(--accent-deep-mocha);
+    padding: 14px 18px;
+    background: var(--surface-secondary); /* Soft sand #E8DCCB */
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    margin-bottom: 12px;
+    border-top: 1px solid var(--border-subtle);
+    border-right: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    transition: transform var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+}
+.cl-insight-box:hover {
+    transform: translateX(2px);
+}
+.cl-insight-box * {
+    color: var(--headings-text) !important; /* Espresso text */
+}
+.cl-insight-box b {
+    color: var(--headings-text) !important;
+}
+
+/* ── Dark Feature Card: Espresso ── */
+.cl-hero-result {
+    background: var(--card-espresso); /* Espresso #514438 */
+    border: 1px solid var(--accent-deep-mocha);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    margin-bottom: 18px;
+    color: var(--text-on-espresso); /* Warm cream #F4EFE6 */
+    box-shadow: var(--shadow-lg);
+}
+.cl-hero-result .hero-stat-card {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(244, 239, 230, 0.22);
+    border-radius: 10px;
+    padding: 16px 18px;
+}
+.cl-hero-result * {
+    color: var(--text-on-espresso);
+}
+
+/* ── Badges ── */
+.cl-badge-ig {
+    background: #E8F5E9;
+    color: #2E7D32;
+    border: 1px solid #A5D6A7;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+}
+.cl-badge-hy {
+    background: #FFEBEE;
+    color: #C62828;
+    border: 1px solid #FFCDD2;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+}
+
+/* ── Dataframes & Tables ── */
+div[data-testid="stDataFrame"] {
+    background-color: var(--surface-card) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--border-subtle) !important;
+    overflow: hidden !important;
+}
+
+/* ── Accessibility: Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ── Responsive Viewport Adjustments ── */
+@media (max-width: 1100px) {
+    div[data-testid="stMetric"] {
+        padding: 10px 10px !important;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 21px !important;
+    }
+    div[data-testid="stMetricLabel"] p {
+        font-size: 9.5px !important;
+    }
+    section.main > div.block-container {
+        padding: 1.2rem 1.4rem 2rem 1.4rem !important;
+    }
+}

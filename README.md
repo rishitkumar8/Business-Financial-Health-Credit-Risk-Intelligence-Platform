@@ -1,445 +1,209 @@
-# 💳 Business Financial Health Credit Risk Intelligence Platform
+# 💳 CreditLens — Corporate Credit Intelligence Dashboard
+### Premium Machine Learning Platform for Financial Risk Analytics & Solvency Prediction
 
-### 📊 An End-to-End Machine Learning Approach for Corporate Financial Analysis
-
-![Python](https://img.shields.io/badge/Python-3.x-blue?logo=python)
-![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Scikit--Learn-orange)
-![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-orange?logo=jupyter)
-![Pandas](https://img.shields.io/badge/Pandas-Data%20Analysis-purple?logo=pandas)
-![Status](https://img.shields.io/badge/Project-Academic-success)
-
----
-
-## 📌 About the Project
-
-Credit rating is an important indicator of a corporation's financial strength and creditworthiness. It helps investors, financial institutions, and other stakeholders understand the financial risk associated with a company.
-
-This project uses **Machine Learning and corporate financial ratios** to study patterns in corporate credit ratings and develop predictive models.
-
-The project follows a complete Machine Learning workflow:
-
-**Data Collection → EDA → Data Cleaning → Feature Engineering → Preprocessing → Model Training → Hyperparameter Tuning → Evaluation → Model Comparison → Interpretation**
-
-Three Machine Learning approaches are explored:
-
-- 📈 **Regression:** How much / what numerical value?
-- 🏷️ **Classification:** Which credit-risk category? 
-- 🔵 **Clustering:** Which companies have similar financial characteristics?
-
-The objective is not only to build predictive models, but also to understand how financial characteristics relate to corporate creditworthiness.
+![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.65+-FF4B4B?logo=streamlit)
+![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-1.7+-F7931E?logo=scikit-learn)
+![Plotly](https://img.shields.io/badge/Plotly-6.0+-3F4F75?logo=plotly)
+![Pandas](https://img.shields.io/badge/Pandas-2.0+-150458?logo=pandas)
+![Status](https://img.shields.io/badge/Deployment-Ready-success)
 
 ---
 
-# 🎯 Problem Statement
+## 📌 Executive Overview
 
-Businesses generate large amounts of financial data across profitability, liquidity, leverage, cash flow, and operational performance. However, evaluating a company’s overall financial health and creditworthiness from these diverse indicators is complex and often relies on manual analysis. This project aims to develop a Machine Learning-based Business Financial Health & Credit Intelligence Platform that analyzes corporate financial indicators and business attributes to assess financial performance, classify credit risk, and identify distinct financial health profiles among companies.
+**CreditLens** is an end-to-end corporate credit intelligence platform that converts multi-source financial ratios into predictive credit risk metrics, solvency classifications, and unsupervised corporate archetypes. 
 
-### The problem addressed in this project is:
+Built on an empirical corpus of **7,805 rating observations across 1,377 global corporations**, CreditLens pairs industry-grade predictive modeling with a modern fintech dashboard design.
 
-> **How effectively can Machine Learning techniques use corporate financial ratios to analyse and predict credit-related outcomes and identify meaningful groups of corporations based on their financial characteristics?**
-
-To address this problem, the project:
-
-- Analyses corporate financial ratios and credit ratings.
-- Identifies relationships between financial indicators.
-- Builds multiple predictive models.
-- Compares different Machine Learning algorithms.
-- Determines the best-performing models using appropriate evaluation metrics.
-- Uses clustering to discover groups of financially similar corporations.
+The platform operationalizes three machine learning tracks:
+1. 📈 **Continuous Credit Rating Score Prediction (Regression):** Predicts continuous rating grade scores (0=D to 22=AAA) with fine-grained ordinal resolution ($R^2 = 0.706$).
+2. 🏷️ **Solvency & Default Risk Classification (Classification):** Categorizes corporations into Investment Grade ($1$) vs. Speculative Grade ($0$) with high precision ($92.4\%$ Accuracy, $0.963$ ROC-AUC).
+3. 🔵 **Unsupervised Financial Archetype Profiling (Clustering):** Discovers latent corporate profiles (High-Margin, Capital-Intensive, Distressed) without relying on credit labels during training.
 
 ---
 
-# 🎯 Project Objectives
+## 🎯 Key Capabilities & Dashboard Modules
 
-### 🔍 1. Understand the Dataset
-Explore the structure, distributions, missing values, relationships, and characteristics of the corporate financial data.
+CreditLens features **seven interconnected functional modules**:
 
-### 🧹 2. Prepare the Data
-Clean the dataset, handle missing values and duplicates, analyse outliers, encode categorical variables, and scale features where required.
-
-### ⚙️ 3. Engineer Useful Features
-Create meaningful derived features from existing financial indicators where they can provide additional information to the models.
-
-### 🤖 4. Build Machine Learning Models
-Implement multiple regression, classification, and clustering algorithms.
-
-### 📊 5. Compare Model Performance
-Evaluate all models using appropriate metrics and identify the strongest-performing approaches.
-
-### 🔬 6. Discover Financial Patterns
-Use clustering techniques to identify groups of corporations with similar financial characteristics.
-
-### 🏆 7. Select the Best Models
-Perform hyperparameter tuning and validation to improve and select suitable models.
-
----
-
-# 📂 Dataset
-
-The project uses a **Corporate Credit Rating with Financial Ratios** dataset.
-
-### Dataset Statistics
-
-| Property | Value |
-|---|---:|
-| 📌 Number of Records | 7,805 |
-| 📌 Number of Features | 25 |
-| 🏢 Sectors | 12 |
-| ⭐ Credit Rating Categories | 23 |
-| 🎯 Binary Rating Classes | 2 |
-
-The dataset contains corporate information, credit ratings, industry information, and several financial ratios.
-
----
-
-## 📋 Dataset Features
-
-### 🏢 Corporate Information
-
-- `Rating Agency`
-- `Corporation`
-- `Rating`
-- `Rating Date`
-- `CIK`
-- `SIC Code`
-- `Sector`
-- `Ticker`
-
-### ⭐ Credit Rating Information
-
-- `Rating`
-- `Binary Rating`
-
-The `Rating` field represents the credit rating assigned to a corporation, while `Binary Rating` provides a binary representation of the rating.
-
-### 💰 Financial Ratios
-
-- `Current Ratio`
-- `Long-term Debt / Capital`
-- `Debt/Equity Ratio`
-- `Gross Margin`
-- `Operating Margin`
-- `EBIT Margin`
-- `EBITDA Margin`
-- `Pre-Tax Profit Margin`
-- `Net Profit Margin`
-- `Asset Turnover`
-- `ROE - Return On Equity`
-- `Return On Tangible Equity`
-- `ROA - Return On Assets`
-- `ROI - Return On Investment`
-- `Operating Cash Flow Per Share`
-- `Free Cash Flow Per Share`
-
----
-
-# 🔎 Exploratory Data Analysis
-
-The EDA stage focuses on understanding the financial dataset before applying Machine Learning algorithms.
-
-### The analysis includes:
-
-- 📐 Dataset shape and structure
-- 🔢 Data types
-- ❌ Missing-value analysis
-- 🔁 Duplicate-value analysis
-- 📊 Feature distributions
-- ⭐ Credit-rating distribution
-- 🔥 Correlation analysis
-- 📈 Feature relationships
-- 📉 Outlier analysis
-- 💰 Financial ratio analysis
-
-### Visualisations
-
-The project includes:
-
-- Distribution plots
-- Correlation heatmap
-- Target distribution
-- Feature-target scatter plots
-- Box plots for outlier analysis
-- Other relevant financial feature visualisations
-
-Each major visualisation is accompanied by an observation explaining the pattern identified from the data.
-
----
-
-# 🧹 Data Preprocessing
-
-Before model training, the dataset undergoes appropriate preprocessing.
-
-### Missing Values
-
-Missing values are identified and handled using suitable imputation strategies.
-
-### Duplicate Records
-
-Duplicate observations are checked and removed where appropriate.
-
-### Outliers
-
-Numerical features are analysed for extreme observations and treated where necessary.
-
-### Categorical Variables
-
-Categorical features are converted into numerical representations using suitable encoding techniques.
-
-### Feature Scaling
-
-Scaling is applied to algorithms that are sensitive to feature magnitude, such as:
-
-- K-Nearest Neighbors
-- Support Vector Machine
-- Support Vector Regression
-- MLP Classifier
-
-### Train-Test Split
-
-A consistent train-test split is maintained within each track to ensure a fair comparison between algorithms.
-
----
-
-# ⚙️ Feature Engineering
-
-Feature engineering is performed to create additional information from the existing financial variables.
-
-The engineered features are selected based on their financial meaning and potential usefulness to the Machine Learning models.
-
-Each engineered feature is documented in the corresponding notebook along with the reasoning behind its creation.
-
----
-
-# 📈 Regression
-
-The regression track compares **10 different regression algorithms**.
-
-### Algorithms Implemented
-
-| # | Algorithm |
-|---:|---|
-| 1️⃣ | Linear Regression |
-| 2️⃣ | Ridge Regression |
-| 3️⃣ | Lasso Regression |
-| 4️⃣ | ElasticNet Regression |
-| 5️⃣ | Polynomial Regression |
-| 6️⃣ | Decision Tree Regressor |
-| 7️⃣ | Random Forest Regressor |
-| 8️⃣ | Gradient Boosting Regressor |
-| 9️⃣ | Support Vector Regressor |
-| 🔟 | K-Nearest Neighbors Regressor |
-
-### 📏 Evaluation Metrics
-
-The models are evaluated using:
-
-- **R² Score**
-- **RMSE**
-- **MAE**
-- **5-Fold Cross-Validated R²**
-
-The two best-performing models are further evaluated using cross-validation.
-
----
-
-# 🏷️ Classification
-
-Classification is used to predict the **credit-rating class** of a corporation from its available financial characteristics.
-
-The classification track is divided into Part A and Part B as specified by the capstone requirements.
-
----
-
-## Part A
-
-### Algorithms
-
-1. Logistic Regression
-2. K-Nearest Neighbors
-3. Gaussian Naive Bayes
-4. Decision Tree Classifier
-5. Support Vector Machine
-
----
-
-## Part B
-
-### Algorithms
-
-6. Random Forest Classifier
-7. AdaBoost Classifier
-8. Gradient Boosting Classifier
-9. Bagging Classifier
-10. MLP Classifier
-
----
-
-## 📏 Classification Evaluation
-
-Each classification model is evaluated using:
-
-- 🎯 Accuracy
-- 🎯 Precision
-- 🎯 Recall
-- 🎯 Weighted F1-Score
-- 📊 Confusion Matrix
-- 📈 ROC-AUC
-
-For multi-class classification, **One-vs-Rest (OvR)** is used for ROC-AUC evaluation.
-
-The final comparison contains all **10 classification algorithms**.
-
----
-
-# 🔵 Clustering
-
-Clustering is used to discover groups of corporations that exhibit similar financial characteristics without using credit-rating labels during model fitting.
-
-### Algorithms
-
-#### 🔹 K-Means Clustering
-
-The optimal number of clusters is investigated using the **Elbow Method**.
-
-#### 🔹 Agglomerative Hierarchical Clustering
-
-Hierarchical relationships between observations are explored using a **Dendrogram** and different linkage strategies.
-
----
-
-## 📏 Clustering Evaluation
-
-The clustering models are evaluated using:
-
-| Metric | Purpose |
+| Module | Core Purpose & Analytical Features |
 |---|---|
-| Silhouette Score | Measures cluster separation and cohesion |
-| Davies-Bouldin Index | Measures similarity between clusters |
-| Calinski-Harabasz Index | Measures cluster separation |
-
-### 📊 Cluster Visualisation
-
-The project includes:
-
-- 📉 K-Means Elbow Curve
-- 🌳 Hierarchical Dendrogram
-- 📊 PCA 2D Cluster Visualisation
-- 🔬 t-SNE Visualisation
-
-Ground-truth credit-rating labels are **not used during clustering**. They are used only after clustering for interpretation or validation.
+| **1. Overview** | Executive summary dashboard featuring real-time KPI metrics (7,805 records, 1,377 corporations, 12 sectors, 99.04% data completeness), grade distributions, sector comparisons, and empirical observations. |
+| **2. Financial Explorer** | Interactive cohort screening by corporation, ticker, credit rating, rating agency, and sector. Explores ratio distributions across 6 categories (Liquidity, Leverage, Profitability, Returns, Asset Utilization, Cash Flow), scatter plots, and CSV export. |
+| **3. Prediction Center** | Real-time dual-track prediction engine supporting both **Mode A (Manual Entry)** and **Mode B (Existing Corporation Search)**. Transforms inputs through exact pipelines and presents continuous rating scores, letter grades, solvency classes, and class probabilities in a dark navy card. |
+| **4. Regression Lab** | Comparative diagnostic suite for **12 regression models**. Displays verified test-set metrics ($R^2$, RMSE, MAE), actual-vs-predicted plots, residual plots, error distributions, and Gini feature importances. |
+| **5. Classification Lab** | Benchmark suite for **12 classification models**. Displays test-set metrics (Accuracy, Precision, Recall, Weighted F1, ROC-AUC), interactive confusion matrices, per-class evaluations, and ROC curves. |
+| **6. Clustering Studio** | Unsupervised segmentation comparing **K-Means ($k=3$)** and **Agglomerative Hierarchical ($k=2$)**. Features 2D PCA projections, inertia elbow curve, dendrogram tree, financial ratio radar profiles, and an interactive cluster assignment tool. |
+| **7. Dataset & EDA** | Audit and exploratory analysis containing shape metrics, missing value audit, duplicate analysis, descriptive statistics, categorical breakdowns, target distributions, and comprehensive correlation heatmaps. |
 
 ---
 
-# 🎛️ Hyperparameter Tuning
-
-Hyperparameter tuning is performed to improve the performance of selected Machine Learning models.
-
-Techniques include:
-
-- `GridSearchCV`
-- `RandomizedSearchCV`
-
-The tuned models are compared with their baseline versions to determine whether the selected parameters improve model performance.
-
----
-
-# 🏆 Model Evaluation & Comparison
-
-All models within a track are evaluated using a consistent dataset split and appropriate metrics.
-
-## 📈 Regression Results
-
-| Rank | Model | R² | RMSE | MAE |
-|---:|---|---:|---:|---:|
-| 1 | Random Forest Regressor | 0.6990 | 2.0602 | 1.5122 |
-| 2 | KNN Regressor | 0.6298 | 2.2847 | 1.5840 |
-| 3 | Support Vector Regressor | 0.5352 | 2.5601 | 1.9232 |
-| 4 | Gradient Boosting Regressor | 0.5226 | 2.5946 | 2.0032 |
-| 5 | Polynomial Regression | 0.4544 | 2.7737 | 2.1351 |
-| 6 | Decision Tree Regressor | 0.4122 | 2.8791 | 2.2264 |
-| 7 | Ridge Regression | 0.3474 | 3.0336 | 2.3208 |
-| 8 | Linear Regression | 0.3474 | 3.0337 | 2.3208 |
-| 9 | ElasticNet Regression | 0.3428 | 3.0443 | 2.3493 |
-| 10 | Lasso Regression | 0.3310 | 3.0715 | 2.3746 |
-
-### Regression Tuning Summary
-
-| Model | Best Parameters | Baseline R² | Tuned R² | Mean CV R² |
-|---|---|---:|---:|---:|
-| Random Forest Regressor | `max_depth=None`, `n_estimators=100` | 0.6990 | 0.7682 | 0.7623 |
-| KNN Regressor | `n_neighbors=3` | 0.6298 | 0.6501 | 0.6713 |
-
----
-
-## 🏷️ Classification Results
-
-| **Rank** | **Model**                    | **Accuracy** | **Precision** | **Recall** | **F1**   | **ROC-AUC** |
-| -------- | ---------------------------- | ------------ | ------------- | ---------- | -------- | ----------- |
-| 1        | Random Forest Classifier     | 0.9142       | 0.9137        | 0.9142     | 0.9135   | 0.9671      |
-| 2        | Bagging Classifier            | 0.9135       | 0.9131        | 0.9135     | 0.9129   | 0.9650      |
-| 3        | MLP Classifier                | 0.8860       | 0.8851        | 0.8860     | 0.8851   | 0.9274      |
-| 4        | KNN Classifier                | 0.8661       | 0.8650        | 0.8661     | 0.8640   | 0.9224      |
-| 5        | Gradient Boosting Classifier  | 0.8443       | 0.8426        | 0.8443     | 0.8414   | 0.9143      |
-| 6        | Support Vector Classifier     | 0.8398       | 0.8403        | 0.8398     | 0.8344   | 0.8851      |
-| 7        | Decision Tree Classifier      | 0.8206       | 0.8185        | 0.8206     | 0.8191   | 0.8438      |
-| 8        | Logistic Regression           | 0.8008       | 0.7972        | 0.8008     | 0.7952   | 0.8355      |
-| 9        | AdaBoost Classifier            | 0.7867       | 0.7830        | 0.7867     | 0.7839   | 0.8410      |
-| 10       | Gaussian Naive Bayes           | 0.7514       | 0.7542        | 0.7514     | 0.7527   | 0.8063      |
-
-### Classification Tuning Summary
-
-| **Model**                | **Best Parameters** | **Baseline F1** | **Tuned F1** | **Mean CV F1** |
-| ------------------------ | ------------------- | --------------- | ------------ | -------------- |
-| Random Forest Classifier | `max_depth=None`, `min_samples_leaf=1`, `min_samples_split=5`, `n_estimators=200` | 0.9135 | 0.9105 | 0.9168 |
-| Bagging Classifier       | `max_features=0.7`, `max_samples=1.0`, `n_estimators=200` | 0.9129 | 0.9188 | 0.9173 |
-
----
-
-## 🔵 Clustering Results
-
-| Algorithm | Silhouette ↑ | Davies-Bouldin ↓ | Calinski-Harabasz ↑ |
-|---|---:|---:|---:|
-| K-Means |0.177552	|1.744044|	1998.38482|
-| Agglomerative Clustering |0.168442	|1.845803	|1866.80092|
-
-
----
-
-# 🏆 Final Model Selection
-
-The final model is selected based on:
-
-- Overall predictive performance
-- Evaluation metrics
-- Cross-validation performance
-- Generalisation ability
-- Hyperparameter tuning results
-- Model complexity
-- Interpretability where relevant
-
-Rather than selecting a model based on a single metric, the project considers the overall performance and suitability of the model for the given problem.
-
----
-
-# 🗂️ Project Structure
+## 🗂️ Fixed Project Structure
 
 ```text
-Corporate-Credit-Rating-ML/
+Business-Financial-Health-Credit-Risk-Intelligence-Platform/
 │
-├── 📄 README.md
-├── 📄 requirements.txt
+├── README.md
+├── requirements.txt
 │
-├── 📁 data/
-│   └── corporateCreditRatingWithFinancialRatios.csv
+├── data/
+│   ├── corporateCreditRatingWithFinancialRatios.csv
+│   ├── train_regression_preprocessed.csv
+│   ├── test_regression_preprocessed.csv
+│   ├── train_classification_preprocessed.csv
+│   ├── test_classification_preprocessed.csv
+│   └── clustering_preprocessed.csv
 │
-├── 📁 notebooks/
-│   ├── 📓 preprocessing.ipynb
-│   ├── 📓 regression.ipynb
-│   ├── 📓 classification.ipynb
-│   └── 📓 clustering.ipynb
+├── notebooks/
+│   ├── preprocessing.ipynb
+│   ├── regression.ipynb
+│   ├── classification.ipynb
+│   └── clustering.ipynb
 │
-├── 📁 models/
-│   └── saved_models/
+├── models/
+│   ├── regression_models.pkl
+│   ├── classification_models.pkl
+│   └── clustering_models.pkl
 │
-└── 📁 app/
+└── app/
     └── app.py
+```
+
+---
+
+## 💻 Technology Stack
+
+- **Frontend & App Framework:** [Streamlit](https://streamlit.io/) (1.65+)
+- **Interactive Visualizations:** [Plotly](https://plotly.com/) Express & Graph Objects (6.0+)
+- **Data Engineering:** [Pandas](https://pandas.pydata.org/) (2.0+), [NumPy](https://numpy.org/) (1.24+)
+- **Machine Learning & Pipeline:** [Scikit-learn](https://scikit-learn.org/) (1.7+), [SciPy](https://scipy.org/) (1.11+)
+- **Model Serialization:** [Joblib](https://joblib.readthedocs.io/) (1.3+)
+
+---
+
+## 🚀 Installation & Local Execution
+
+### 1. Clone or Navigate to the Repository
+
+```bash
+cd Business-Financial-Health-Credit-Risk-Intelligence-Platform
+```
+
+### 2. Set Up a Virtual Environment (Recommended)
+
+```bash
+python -m venv venv
+
+# Windows:
+venv\Scripts\activate
+
+# macOS / Linux:
+source venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run the Streamlit Application
+
+```bash
+streamlit run app/app.py
+```
+
+The application will launch in your browser at `http://localhost:8501`.
+
+---
+
+## 📂 Dataset Specification
+
+The project uses the **Corporate Credit Rating with Financial Ratios** dataset:
+
+- **Total Records:** 7,805
+- **Unique Corporations:** 1,377
+- **Features:** 25 raw columns (17 financial ratios + identifiers and targets)
+- **Data Completeness:** 99.04%
+- **Rating Agencies:** Egan-Jones Ratings, Standard & Poor's, Moody's, Fitch Ratings, DBRS, Japan Credit Rating Agency, HR Ratings de Mexico.
+- **Sectors (12):** BusEq (Business Equipment), Chems (Chemicals), Durbl (Durables), Enrgy (Energy), Hlth (Healthcare), Manuf (Manufacturing), Money (Financials), NoDur (Non-Durables), Other, Shops (Retail/Wholesale), Telcm (Telecommunications), Utils (Utilities).
+
+### Financial Feature Categorization
+
+1. **Liquidity:** Current Ratio
+2. **Leverage:** Long-term Debt / Capital, Debt/Equity Ratio
+3. **Profitability:** Gross Margin, Operating Margin, EBIT Margin, EBITDA Margin, Pre-Tax Profit Margin, Net Profit Margin (and engineered `Average Profit Margin`)
+4. **Returns:** Return on Equity (ROE), Return on Tangible Equity, Return on Assets (ROA), Return on Investment (ROI)
+5. **Asset Utilization:** Asset Turnover
+6. **Cash Flow:** Operating Cash Flow Per Share, Free Cash Flow Per Share
+
+---
+
+## 🤖 Model Artifacts & Benchmark Performance
+
+All models are saved inside `models/` and loaded dynamically via `joblib`:
+
+### 1. Regression Models (`models/regression_models.pkl`)
+12 trained estimators predicting continuous `Rating_Score` (0=D to 22=AAA):
+
+| Model | $R^2$ Score | RMSE | MAE | Tuned Status |
+|---|---:|---:|---:|:---:|
+| **Random Forest - Tuned** | **0.7062** | **2.0355** | **1.4939** | **Tuned** |
+| Random Forest Regressor | 0.6990 | 2.0602 | 1.5122 | Baseline |
+| KNN Regressor - Tuned | 0.6385 | 2.2578 | 1.5543 | Tuned |
+| KNN Regressor | 0.6298 | 2.2848 | 1.5869 | Baseline |
+| Support Vector Regressor (SVR) | 0.5352 | 2.5601 | 1.9232 | Baseline |
+| Gradient Boosting Regressor | 0.5226 | 2.5946 | 2.0032 | Baseline |
+| Polynomial Regression (Degree 2) | 0.4544 | 2.7737 | 2.1351 | Baseline |
+| Decision Tree Regressor | 0.4122 | 2.8791 | 2.2264 | Baseline |
+| Ridge Regression | 0.3474 | 3.0336 | 2.3208 | Baseline |
+| Linear Regression | 0.3474 | 3.0336 | 2.3208 | Baseline |
+| ElasticNet Regression | 0.2227 | 3.3107 | 2.6072 | Baseline |
+| Lasso Regression | 0.2014 | 3.3558 | 2.6739 | Baseline |
+
+### 2. Classification Models (`models/classification_models.pkl`)
+12 trained estimators predicting `Binary Rating` (1 = Investment Grade, 0 = Speculative Grade):
+
+| Model | Accuracy | Weighted Precision | Weighted Recall | Weighted F1 | ROC-AUC |
+|---|---:|---:|---:|---:|---:|
+| **Random Forest - Tuned** | **0.9238** | **0.9234** | **0.9238** | **0.9231** | **0.9634** |
+| Random Forest Classifier | 0.9142 | 0.9137 | 0.9142 | 0.9135 | 0.9576 |
+| Bagging Classifier | 0.9135 | 0.9131 | 0.9135 | 0.9129 | 0.9587 |
+| Bagging - Tuned | 0.9116 | 0.9114 | 0.9116 | 0.9104 | 0.9587 |
+| MLP Classifier | 0.8860 | 0.8851 | 0.8860 | 0.8851 | 0.9406 |
+| KNN Classifier | 0.8661 | 0.8650 | 0.8661 | 0.8640 | 0.9172 |
+| Support Vector Classifier (SVC) | 0.8450 | 0.8437 | 0.8450 | 0.8432 | 0.9070 |
+| Gradient Boosting Classifier | 0.8443 | 0.8426 | 0.8443 | 0.8414 | 0.9056 |
+| Decision Tree Classifier | 0.8341 | 0.8336 | 0.8341 | 0.8338 | 0.8226 |
+| Logistic Regression | 0.7719 | 0.7679 | 0.7719 | 0.7656 | 0.8242 |
+| Gaussian Naive Bayes | 0.7636 | 0.7584 | 0.7636 | 0.7548 | 0.8122 |
+| AdaBoost Classifier | 0.7559 | 0.7533 | 0.7559 | 0.7542 | 0.8037 |
+
+### 3. Clustering Models (`models/clustering_models.pkl`)
+Unsupervised models evaluated on the preprocessed financial matrix (28 features):
+
+| Algorithm | Clusters | Silhouette Score | Davies-Bouldin Index | Calinski-Harabasz Index | Out-of-Sample Prediction |
+|---|:---:|---:|---:|---:|:---:|
+| **K-Means** | 3 | **0.1776** | **1.7440** | **1998.38** | **Yes (`predict()`)** |
+| Agglomerative Hierarchical | 2 | 0.1684 | 1.8458 | 1866.80 | No (Transductive) |
+
+---
+
+## ☁️ Streamlit Community Cloud Deployment
+
+CreditLens is configured for deployment to **Streamlit Community Cloud**:
+
+1. Push this repository to GitHub.
+2. Sign in to [share.streamlit.io](https://share.streamlit.io/).
+3. Connect your repository:
+   - **Repository:** `Business-Financial-Health-Credit-Risk-Intelligence-Platform`
+   - **Branch:** `main`
+   - **Main file path:** `app/app.py`
+4. Click **Deploy**. Dependencies from `requirements.txt` will install automatically.
+
+---
+
+## ⚖️ Analytical Disclaimer
+
+> **Notice:** Predictions, scores, and cluster assignments produced by CreditLens are statistical estimates generated by machine learning models trained on historical corporate ratios. They do not constitute official credit ratings issued by NRSRO rating agencies (S&P, Moody's, Fitch) nor do they constitute investment, financial, or legal advice.
