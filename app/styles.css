@@ -472,11 +472,37 @@ div[data-testid="stExpander"] summary {
 }
 
 /* ── Dataframes & Tables ── */
-div[data-testid="stDataFrame"] {
+div[data-testid="stDataFrame"],
+div[data-testid="stDataFrame"] > div,
+div[data-testid="stDataFrame"] [data-testid="glide-data-grid"],
+div[data-testid="stTable"] {
     background-color: var(--surface-card) !important;
     border-radius: var(--radius-md) !important;
     border: 1px solid var(--border-subtle) !important;
     overflow: hidden !important;
+}
+
+div[data-testid="stDataFrame"] canvas {
+    background-color: var(--surface-card) !important;
+}
+
+div[data-testid="stTable"] table {
+    background-color: var(--surface-card) !important;
+    color: var(--headings-text) !important;
+    border-collapse: collapse !important;
+}
+
+div[data-testid="stTable"] th {
+    background-color: var(--surface-secondary) !important;
+    color: var(--headings-text) !important;
+    font-weight: 700 !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+div[data-testid="stTable"] td {
+    background-color: var(--surface-card) !important;
+    color: var(--body-text) !important;
+    border-bottom: 1px solid var(--border-light) !important;
 }
 
 /* ── Accessibility: Reduced Motion ── */

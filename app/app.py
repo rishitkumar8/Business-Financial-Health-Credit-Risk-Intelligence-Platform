@@ -140,15 +140,16 @@ DUMMY_SECTORS = [f"Sector_{s}" for s in sorted(SECTORS_LIST) if s != "BusEq"]
 # ──────────────────────────────────────────────────────────────────────────────
 # 6. PLOTLY CHART STYLER
 # ──────────────────────────────────────────────────────────────────────────────
-def style_fig(fig, height: int = 340):
+def style_fig(fig, height: int = 340, margin: dict = None):
     """Styles Plotly figures with transparent canvas so opaque soft-cream cards show through,
     while using crisp espresso typography, subtle taupe gridlines, and clear legend alignment."""
+    m = margin if margin is not None else dict(l=14, r=14, t=32, b=30)
     fig.update_layout(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         height=height,
-        margin=dict(l=14, r=14, t=32, b=30),
+        margin=m,
         font=dict(family="Plus Jakarta Sans, Inter, -apple-system, sans-serif", size=11, color=C_ESPRESSO),
         hoverlabel=dict(
             bgcolor=C_CARD,
@@ -179,8 +180,8 @@ def style_fig(fig, height: int = 340):
     )
     return fig
 
-def chart(fig, height: int = 340):
-    style_fig(fig, height)
+def chart(fig, height: int = 340, margin: dict = None):
+    style_fig(fig, height, margin=margin)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 def card_header(title: str, subtitle: str = ""):
@@ -190,6 +191,41 @@ def card_header(title: str, subtitle: str = ""):
             {"<div class='cl-card-sub'>" + subtitle + "</div>" if subtitle else ""}
         </div>
     """, unsafe_allow_html=True)
+
+def format_leaderboard_table(df, format_dict=None, highlight_max_cols=None, highlight_min_cols=None):
+    """Styles dataframe tables so cell backgrounds blend seamlessly with the soft cream palette,
+    ensuring bold espresso typography and high-contrast metric highlights."""
+    styler = df.style
+    if format_dict:
+        styler = styler.format(format_dict)
+    styler = styler.set_properties(**{
+        "background-color": C_CARD,
+        "color": C_ESPRESSO,
+    })
+    styler = styler.set_table_styles([
+        {"selector": "th", "props": [
+            ("background-color", C_PANEL_SEC),
+            ("color", C_ESPRESSO),
+            ("font-weight", "700"),
+            ("border-bottom", f"1px solid {C_BORDER}")
+        ]},
+        {"selector": "td", "props": [
+            ("background-color", C_CARD),
+            ("color", C_ESPRESSO),
+            ("border-bottom", f"1px solid {C_BORDER}")
+        ]}
+    ])
+    if highlight_max_cols:
+        styler = styler.highlight_max(
+            subset=highlight_max_cols,
+            props=f"background-color: {C_PANEL_SEC}; color: {C_ESPRESSO}; font-weight: 700;"
+        )
+    if highlight_min_cols:
+        styler = styler.highlight_min(
+            subset=highlight_min_cols,
+            props=f"background-color: {C_PANEL_SEC}; color: {C_ESPRESSO}; font-weight: 700;"
+        )
+    return styler
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 7. DATA CACHING & LOADERS
@@ -914,13 +950,17 @@ elif selected_page == "Regression Lab":
             with st.container(border=True):
                 card_header("Model Leaderboard (Test Set N=1,561)", "Sorted by Coefficient of Determination R²")
                 st.dataframe(
-                    reg_eval.style.format({
-                        "R²": "{:.4f}",
-                        "RMSE": "{:.4f}",
-                        "MAE": "{:.4f}"
-                    }).highlight_max(subset=["R²"], color=C_HIGHLIGHT)
-                      .highlight_min(subset=["RMSE", "MAE"], color=C_HIGHLIGHT),
-                    use_container_width=True, height=390
+                    format_leaderboard_table(
+                        reg_eval,
+                        format_dict={
+                            "R²": "{:.4f}",
+                            "RMSE": "{:.4f}",
+                            "MAE": "{:.4f}"
+                        },
+                        highlight_max_cols=["R²"],
+                        highlight_min_cols=["RMSE", "MAE"]
+                    ),
+                    use_container_width=True, height=410
                 )
 
         with c_bar:
@@ -928,12 +968,24 @@ elif selected_page == "Regression Lab":
                 card_header("R² Performance Comparison", "Out-of-sample explanatory power across all 12 regressors")
                 fig = px.bar(
                     reg_eval, x="R²", y="Model", orientation="h",
-                    color="R²",
-                    color_continuous_scale="Blues"
+                    text="R²",
+                    labels={"R²": "R² Score", "Model": "Model"}
                 )
-                fig.update_layout(yaxis=dict(autorange="reversed"), showlegend=False)
-                fig.update_coloraxes(showscale=False)
-                chart(fig, height=390)
+                fig.update_traces(
+                    marker_color=V_BLUE,
+                    marker_line_color="#1D4ED8",
+                    marker_line_width=1,
+                    texttemplate="%{x:.4f}",
+                    textposition="outside",
+                    textfont=dict(color=C_ESPRESSO, size=11),
+                    cliponaxis=False
+                )
+                fig.update_layout(
+                    yaxis=dict(autorange="reversed", title=None, showgrid=False),
+                    xaxis=dict(range=[0, 0.90], showgrid=True),
+                    showlegend=False
+                )
+                chart(fig, height=410, margin=dict(l=14, r=40, t=20, b=30))
 
         # Top Model Highlight Banner
         top_reg = reg_eval.iloc[0]
@@ -1028,14 +1080,18 @@ elif selected_page == "Classification Lab":
             with st.container(border=True):
                 card_header("Classifier Leaderboard (Test Set N=1,561)", "Sorted by Weighted F1-Score")
                 st.dataframe(
-                    clf_eval.style.format({
-                        "Accuracy":  "{:.4f}",
-                        "Precision": "{:.4f}",
-                        "Recall":    "{:.4f}",
-                        "F1":        "{:.4f}",
-                        "ROC-AUC":   lambda x: f"{x:.4f}" if isinstance(x, (int, float)) and not np.isnan(x) else "—"
-                    }).highlight_max(subset=["Accuracy", "F1"], color=C_HIGHLIGHT),
-                    use_container_width=True, height=390
+                    format_leaderboard_table(
+                        clf_eval,
+                        format_dict={
+                            "Accuracy":  "{:.4f}",
+                            "Precision": "{:.4f}",
+                            "Recall":    "{:.4f}",
+                            "F1":        "{:.4f}",
+                            "ROC-AUC":   lambda x: f"{x:.4f}" if isinstance(x, (int, float)) and not np.isnan(x) else "—"
+                        },
+                        highlight_max_cols=["Accuracy", "F1"]
+                    ),
+                    use_container_width=True, height=410
                 )
 
         with c_bar:
@@ -1043,12 +1099,24 @@ elif selected_page == "Classification Lab":
                 card_header("Weighted F1-Score Comparison", "Harmonic balance of precision and recall")
                 fig = px.bar(
                     clf_eval, x="F1", y="Model", orientation="h",
-                    color="F1",
-                    color_continuous_scale="Purples"
+                    text="F1",
+                    labels={"F1": "Weighted F1-Score", "Model": "Model"}
                 )
-                fig.update_layout(yaxis=dict(autorange="reversed"), showlegend=False)
-                fig.update_coloraxes(showscale=False)
-                chart(fig, height=390)
+                fig.update_traces(
+                    marker_color=V_BLUE,
+                    marker_line_color="#1D4ED8",
+                    marker_line_width=1,
+                    texttemplate="%{x:.4f}",
+                    textposition="outside",
+                    textfont=dict(color=C_ESPRESSO, size=11),
+                    cliponaxis=False
+                )
+                fig.update_layout(
+                    yaxis=dict(autorange="reversed", title=None, showgrid=False),
+                    xaxis=dict(range=[0, 1.05], showgrid=True),
+                    showlegend=False
+                )
+                chart(fig, height=410, margin=dict(l=14, r=40, t=20, b=30))
 
         # Highlight Banner
         top_clf = clf_eval.iloc[0]
@@ -1124,11 +1192,16 @@ elif selected_page == "Clustering Studio":
         with st.container(border=True):
             card_header("Clustering Algorithm Performance Comparison", "Silhouette Score, Davies-Bouldin Index, and Calinski-Harabasz Index")
             st.dataframe(
-                clu_eval.style.format({
-                    "Silhouette ↑": "{:.4f}",
-                    "DB Index ↓":   "{:.4f}",
-                    "CH Index ↑":   "{:.0f}"
-                }),
+                format_leaderboard_table(
+                    clu_eval,
+                    format_dict={
+                        "Silhouette ↑": "{:.4f}",
+                        "DB Index ↓":   "{:.4f}",
+                        "CH Index ↑":   "{:.0f}"
+                    },
+                    highlight_max_cols=["Silhouette ↑", "CH Index ↑"],
+                    highlight_min_cols=["DB Index ↓"]
+                ),
                 use_container_width=True
             )
             st.markdown(f"""
